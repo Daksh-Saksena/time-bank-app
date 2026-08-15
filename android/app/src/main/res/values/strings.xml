@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Time Bank of India</string>
+    <string name="title_activity_main">Time Bank of India</string>
+    <string name="package_name">com.timebank.app</string>
+    <string name="custom_url_scheme">com.timebank.app</string>
+</resources>
