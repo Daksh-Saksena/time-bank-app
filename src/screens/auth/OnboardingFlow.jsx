@@ -100,7 +100,7 @@ export default function OnboardingFlow() {
               {[
                 { role: ROLES.SENIOR, emoji: '', label: 'Senior Citizen', desc: 'I need help with daily tasks and errands. I can receive time-based services from the community.' },
                 { role: ROLES.VOLUNTEER, emoji: '', label: 'Volunteer', desc: 'I want to help seniors in my area. I earn time credits for my service.' },
-                { role: ROLES.ADMIN, emoji: '', label: 'Pincode Admin', desc: 'I manage the Time Bank for my pincode — approving members and overseeing activity.' },
+                { role: ROLES.ADMIN, emoji: '', label: 'Pincode Admin', desc: 'I manage the Time Bank for my pincode - approving members and overseeing activity.' },
               ].map(({ role, emoji, label, desc }) => (
                 <div
                   key={role}
@@ -222,10 +222,10 @@ export default function OnboardingFlow() {
             <div style={{ background: 'var(--color-surface-alt)', borderRadius: 'var(--radius-lg)', padding: 'var(--space-5)', marginBottom: 'var(--space-5)', textAlign: 'left' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
                 {[
-                  { label: 'Name', value: form.name || '—' },
-                  { label: 'Phone', value: form.phone || '—' },
-                  { label: 'Role', value: form.role ? form.role.charAt(0).toUpperCase() + form.role.slice(1) : '—' },
-                  { label: 'Pincode', value: form.pincode || '—' },
+                  { label: 'Name', value: form.name || '-' },
+                  { label: 'Phone', value: form.phone || '-' },
+                  { label: 'Role', value: form.role ? form.role.charAt(0).toUpperCase() + form.role.slice(1) : '-' },
+                  { label: 'Pincode', value: form.pincode || '-' },
                   { label: 'KYC Status', value: 'Pending Review' },
                 ].map(({ label, value }) => (
                   <div key={label} className="flex justify-between">

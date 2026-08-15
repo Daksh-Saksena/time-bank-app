@@ -121,7 +121,7 @@ export default function PendingApprovals() {
                 { label: 'Area', value: `${selectedUser.area}, ${selectedUser.pincode}` },
                 { label: 'Document', value: `${selectedUser.kyc.documentType} ****${selectedUser.kyc.aadhaarLast4}` },
                 { label: 'Submitted', value: formatDateTime(selectedUser.submittedOn) },
-                { label: 'Notes', value: selectedUser.notes || '—' },
+                { label: 'Notes', value: selectedUser.notes || '-' },
               ].map(({ label, value }) => (
                 <div key={label} className="flex justify-between" style={{ borderBottom: '1px solid var(--color-border)', paddingBottom: 'var(--space-2)' }}>
                   <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>{label}</span>

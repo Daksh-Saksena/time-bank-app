@@ -15,7 +15,7 @@ export default function ImpactDashboard() {
   const ratings = getUserRatings();
   const avgRating = ratings.length > 0
     ? (ratings.reduce((sum, r) => sum + r.stars, 0) / ratings.length).toFixed(1)
-    : currentUser?.rating?.toFixed(1) || '—';
+    : currentUser?.rating?.toFixed(1) || '-';
   const serviceBreakdown = ledger.reduce((acc, txn) => {
     if (txn.type === 'credit' && txn.service) {
       acc[txn.service] = (acc[txn.service] || 0) + txn.minutes;

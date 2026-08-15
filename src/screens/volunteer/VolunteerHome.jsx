@@ -59,7 +59,7 @@ export default function VolunteerHome() {
             <div className="stat-label">People Helped</div>
           </div>
           <div className="stat-card">
-            <div className="stat-value">{currentUser?.rating?.toFixed(1) || '—'} </div>
+            <div className="stat-value">{currentUser?.rating?.toFixed(1) || '-'} </div>
             <div className="stat-label">Your Rating</div>
           </div>
         </div>

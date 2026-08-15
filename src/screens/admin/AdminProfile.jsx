@@ -59,10 +59,10 @@ export default function AdminProfile() {
                 <span style={{ fontSize: '1.3rem' }}></span>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 'var(--font-size-sm)', fontWeight: 600 }}>
-                    {req.serviceType} — {req.seniorName}
+                    {req.serviceType} - {req.seniorName}
                   </div>
                   <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
-                    By {req.assignedVolunteerName || 'Unknown'} · {req.duration ? formatMinutes(req.duration) : '—'}
+                    By {req.assignedVolunteerName || 'Unknown'} · {req.duration ? formatMinutes(req.duration) : '-'}
                   </div>
                 </div>
               </div>

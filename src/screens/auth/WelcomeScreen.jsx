@@ -44,7 +44,7 @@ export default function WelcomeScreen() {
         </button>
         <div className="divider" style={{ position: 'relative' }}>
           <span style={{ position: 'absolute', left: '50%', top: '-10px', transform: 'translateX(-50%)', background: 'white', padding: '0 var(--space-3)', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-xs)', fontWeight: 600 }}>
-            DEMO — Jump In As
+            DEMO - Jump In As
           </span>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>

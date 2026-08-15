@@ -157,7 +157,7 @@ export default function RequestHelp() {
           {isListening && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', color: 'var(--color-danger)', fontSize: 'var(--font-size-sm)', marginTop: 'var(--space-2)' }}>
               <span style={{ animation: 'pulse 1s infinite', display: 'inline-block' }}>●</span>
-              Listening — speak clearly…
+              Listening - speak clearly…
             </div>
           )}
           {!voiceSupported && (

@@ -92,7 +92,7 @@ export default function RequestCard({ request, onAccept, showDistance, distance,
       )}
       {request.rating && (
         <div style={{ marginTop: 'var(--space-3)', padding: 'var(--space-2) var(--space-3)', background: 'var(--color-success-bg)', borderRadius: 'var(--radius-sm)', fontSize: 'var(--font-size-sm)' }}>
-          {request.rating.stars}/5 — {request.rating.review}
+          {request.rating.stars}/5 - {request.rating.review}
         </div>
       )}
     </div>

@@ -60,7 +60,7 @@ export function SOSModal({ isOpen, onClose }) {
             onClick={onClose}
             style={{ marginTop: 'var(--space-2)' }}
           >
-            Cancel — I am safe
+            Cancel - I am safe
           </button>
         </div>
       </div>
