@@ -1,9 +1,15 @@
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { formatMinutes, REQUEST_STATUS, SERVICE_ICONS, SERVICE_LABELS } from '../../constants';
+
 export default function VolunteerHome() {
-  const { currentUser, getOpenRequests, getVolunteerActiveRequest, acceptRequest } = useApp();
+  const { currentUser, getOpenRequests, getVolunteerActiveRequest, acceptRequest, fetchRequests } = useApp();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    fetchRequests();
+  }, [fetchRequests]);
   const openRequests = getOpenRequests();
   const activeRequest = getVolunteerActiveRequest();
   const stats = currentUser?.volunteerStats || {};

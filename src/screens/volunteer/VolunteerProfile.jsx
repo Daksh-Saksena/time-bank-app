@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
+import { useLanguage } from '../../context/LanguageContext';
 import StarRating from '../../components/common/StarRating';
 import { formatMinutes, KYC_STATUS } from '../../constants';
 import { supabase } from '../../lib/supabase';
@@ -11,10 +12,12 @@ import {
   ShieldCheck,
   Power,
   ChevronRight,
+  Globe,
 } from 'lucide-react';
 
 export default function VolunteerProfile() {
   const { currentUser, logout, getUserRatings } = useApp();
+  const { t, currentLang, languages, setLangModalOpen } = useLanguage();
   const navigate = useNavigate();
   const ratings = getUserRatings();
   const [available, setAvailable] = useState(currentUser?.is_available ?? true);
@@ -218,12 +221,24 @@ export default function VolunteerProfile() {
             </button>
 
             <button
+              onClick={() => setLangModalOpen(true)}
+              className="flex items-center gap-3"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 'var(--space-3) 0', width: '100%', textAlign: 'left', fontFamily: 'var(--font-family)', fontSize: 'var(--font-size-base)', color: 'var(--color-text-primary)' }}
+            >
+              <Globe size={18} color="var(--color-primary)" />
+              <span>{t('language', 'Language')} / भाषा</span>
+              <span style={{ marginLeft: 'auto', fontSize: 'var(--font-size-xs)', color: 'var(--color-primary)', fontWeight: 700 }}>
+                {languages.find((l) => l.code === currentLang)?.nativeName || 'English'} ›
+              </span>
+            </button>
+
+            <button
               onClick={handleHelpSupport}
               className="flex items-center gap-3"
               style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 'var(--space-3) 0', width: '100%', textAlign: 'left', fontFamily: 'var(--font-family)', fontSize: 'var(--font-size-base)', color: 'var(--color-text-primary)' }}
             >
               <MessageCircle size={18} color="#25D366" />
-              <span>Help & Support (WhatsApp)</span>
+              <span>{t('helpSupportWhatsApp', 'Help & Support (WhatsApp)')}</span>
               <ChevronRight size={18} style={{ marginLeft: 'auto', color: 'var(--color-text-muted)' }} />
             </button>
           </div>

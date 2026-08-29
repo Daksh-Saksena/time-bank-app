@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import RequestCard from '../../components/common/RequestCard';
 import {
@@ -9,10 +9,14 @@ import RealMap from '../../components/common/RealMap';
 
 const ALL_TYPES = 'all';
 export default function NearbyFeed({ role = 'senior' }) {
-  const { getOpenRequests, getUserRequests, currentUser, acceptRequest, requests } = useApp();
+  const { getOpenRequests, getUserRequests, currentUser, acceptRequest, requests, fetchRequests } = useApp();
   const [view, setView] = useState('list');
   const [filterUrgency, setFilterUrgency] = useState(ALL_TYPES);
   const [filterType, setFilterType] = useState(ALL_TYPES);
+
+  useEffect(() => {
+    fetchRequests();
+  }, [fetchRequests]);
   const displayRequests = role === 'volunteer'
     ? getOpenRequests()
     : getUserRequests();

@@ -1,8 +1,10 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
+import { LanguageProvider } from './context/LanguageContext';
 import { ROLES } from './constants';
 import BottomNav from './components/common/BottomNav';
 import RatingModal from './components/common/RatingModal';
+import LanguageModal from './components/common/LanguageModal';
 import WelcomeScreen from './screens/auth/WelcomeScreen';
 import LoginScreen from './screens/auth/LoginScreen';
 import OnboardingFlow from './screens/auth/OnboardingFlow';
@@ -20,6 +22,7 @@ import PendingApprovals from './screens/admin/PendingApprovals';
 import AdminRequests from './screens/admin/AdminRequests';
 import AdminMembers from './screens/admin/AdminMembers';
 import AdminProfile from './screens/admin/AdminProfile';
+
 function ProtectedRoute({ children, allowedRoles }) {
   const { isLoggedIn, currentUser, loading } = useApp();
   if (loading && !currentUser) {
@@ -36,6 +39,7 @@ function ProtectedRoute({ children, allowedRoles }) {
   }
   return children;
 }
+
 function AppLayout({ children, showNav = true }) {
   const { seniorMode } = useApp();
   return (
@@ -43,9 +47,11 @@ function AppLayout({ children, showNav = true }) {
       {children}
       {showNav && <BottomNav />}
       <RatingModal />
+      <LanguageModal />
     </div>
   );
 }
+
 function AppRoutes() {
   const { isLoggedIn, currentUser } = useApp();
   return (
@@ -118,12 +124,16 @@ function AppRoutes() {
     </Routes>
   );
 }
+
 export default function App() {
   return (
-    <AppProvider>
-      <BrowserRouter>
-        <AppRoutes />
-      </BrowserRouter>
-    </AppProvider>
+    <LanguageProvider>
+      <AppProvider>
+        <BrowserRouter>
+          <AppRoutes />
+          <LanguageModal />
+        </BrowserRouter>
+      </AppProvider>
+    </LanguageProvider>
   );
 }

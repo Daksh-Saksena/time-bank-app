@@ -175,7 +175,29 @@ export function AppProvider({ children }) {
     fetchRequests();
     fetchMembers();
 
-    return () => subscription.unsubscribe();
+    // Supabase Realtime listener for live cross-device sync
+    const realtimeChannel = supabase
+      .channel('public:requests_and_profiles')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'requests' },
+        () => {
+          fetchRequests();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'profiles' },
+        () => {
+          fetchMembers();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+      supabase.removeChannel(realtimeChannel);
+    };
   }, [fetchProfile, fetchRequests, fetchMembers, fetchUserLedger]);
 
   const login = useCallback((user) => {
