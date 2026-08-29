@@ -25,6 +25,7 @@ export default function RequestHelp() {
   const [isListening, setIsListening] = useState(false);
   const [voiceError, setVoiceError] = useState('');
   const recognitionRef = useRef(null);
+  const isListeningRef = useRef(false);
 
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -37,24 +38,19 @@ export default function RequestHelp() {
 
       rec.onstart = () => {
         setIsListening(true);
+        isListeningRef.current = true;
         setVoiceError('');
       };
 
       rec.onresult = (event) => {
-        let finalTranscript = '';
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript + ' ';
-          } else {
-            finalTranscript += event.results[i][0].transcript;
-          }
+        let transcript = '';
+        for (let i = 0; i < event.results.length; i++) {
+          transcript += event.results[i][0].transcript;
         }
-        if (finalTranscript.trim()) {
+        if (transcript.trim()) {
           setForm((prev) => ({
             ...prev,
-            description: prev.description
-              ? `${prev.description.trim()} ${finalTranscript.trim()}`
-              : finalTranscript.trim(),
+            description: transcript.trim(),
           }));
         }
       };
@@ -62,27 +58,45 @@ export default function RequestHelp() {
       rec.onerror = (event) => {
         console.warn('Speech recognition error:', event.error);
         if (event.error === 'not-allowed') {
-          setVoiceError('Microphone permission blocked. Please allow microphone access.');
+          setVoiceError('Microphone access blocked. Please allow microphone permissions in your browser.');
+          setIsListening(false);
+          isListeningRef.current = false;
         } else if (event.error === 'no-speech') {
-          setVoiceError('No speech detected. Tap Speak and speak into your mic.');
+          // Keep listening or allow user to speak
+        } else if (event.error === 'network') {
+          setVoiceError('Speech recognition service unreachable. You can type your request directly.');
+          setIsListening(false);
+          isListeningRef.current = false;
         } else {
-          setVoiceError(`Voice notice: ${event.error}`);
+          setVoiceError(`Voice note: ${event.error}`);
         }
-        setIsListening(false);
       };
 
       rec.onend = () => {
-        setIsListening(false);
+        // If user is still recording, auto restart
+        if (isListeningRef.current) {
+          try {
+            rec.start();
+          } catch (e) {
+            setIsListening(false);
+            isListeningRef.current = false;
+          }
+        } else {
+          setIsListening(false);
+        }
       };
 
       recognitionRef.current = rec;
     }
 
     if (startVoice) {
-      setTimeout(() => startListeningSession(), 600);
+      setTimeout(() => {
+        startListeningSession();
+      }, 500);
     }
 
     return () => {
+      isListeningRef.current = false;
       if (recognitionRef.current) {
         try {
           recognitionRef.current.stop();
@@ -91,36 +105,15 @@ export default function RequestHelp() {
     };
   }, []);
 
-  async function startListeningSession() {
+  function startListeningSession() {
     setVoiceError('');
-
-    // Explicitly ask for microphone permission if supported
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        // Release stream immediately so SpeechRecognition can use it
-        stream.getTracks().forEach((track) => track.stop());
-      } catch (err) {
-        setVoiceError('Microphone access was denied. Please allow mic access in your browser.');
-        return;
-      }
-    }
-
     if (!recognitionRef.current) {
-      // Fallback for browsers with no Web Speech API
-      setIsListening(true);
-      setVoiceError('Live speech recognition not natively supported in this browser. Added sample text.');
-      setTimeout(() => {
-        setForm((prev) => ({
-          ...prev,
-          description: prev.description || 'I need help picking up my prescription medicines from the nearby pharmacy.',
-        }));
-        setIsListening(false);
-      }, 1500);
+      setVoiceError('Voice recognition is not supported in this browser. Please type your request.');
       return;
     }
 
     try {
+      isListeningRef.current = true;
       recognitionRef.current.start();
       setIsListening(true);
     } catch (err) {
@@ -128,14 +121,17 @@ export default function RequestHelp() {
       try {
         recognitionRef.current.stop();
         setTimeout(() => {
-          recognitionRef.current.start();
-          setIsListening(true);
-        }, 200);
+          if (isListeningRef.current) {
+            recognitionRef.current.start();
+            setIsListening(true);
+          }
+        }, 150);
       } catch (e) {}
     }
   }
 
   function stopListeningSession() {
+    isListeningRef.current = false;
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
@@ -311,33 +307,6 @@ export default function RequestHelp() {
             onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
             rows={4}
           />
-
-          {/* Quick preset chips for instant 1-tap request */}
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 'var(--space-2)' }}>
-            {[
-              '💊 Pick up BP medicine from pharmacy',
-              '🛒 Buy milk, bread and vegetables',
-              '🏦 Help updating bank passbook',
-              '🚶 Companion for 30m park walk',
-            ].map((preset) => (
-              <button
-                key={preset}
-                type="button"
-                onClick={() => setForm((f) => ({ ...f, description: preset.slice(3) }))}
-                style={{
-                  background: 'var(--color-surface-alt)',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: 'var(--radius-full)',
-                  padding: '4px 10px',
-                  fontSize: '11px',
-                  color: 'var(--color-text-secondary)',
-                  cursor: 'pointer',
-                }}
-              >
-                {preset}
-              </button>
-            ))}
-          </div>
 
           {isListening && (
             <div
