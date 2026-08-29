@@ -312,6 +312,33 @@ export default function RequestHelp() {
             rows={4}
           />
 
+          {/* Quick preset chips for instant 1-tap request */}
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 'var(--space-2)' }}>
+            {[
+              '💊 Pick up BP medicine from pharmacy',
+              '🛒 Buy milk, bread and vegetables',
+              '🏦 Help updating bank passbook',
+              '🚶 Companion for 30m park walk',
+            ].map((preset) => (
+              <button
+                key={preset}
+                type="button"
+                onClick={() => setForm((f) => ({ ...f, description: preset.slice(3) }))}
+                style={{
+                  background: 'var(--color-surface-alt)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 'var(--radius-full)',
+                  padding: '4px 10px',
+                  fontSize: '11px',
+                  color: 'var(--color-text-secondary)',
+                  cursor: 'pointer',
+                }}
+              >
+                {preset}
+              </button>
+            ))}
+          </div>
+
           {isListening && (
             <div
               style={{
