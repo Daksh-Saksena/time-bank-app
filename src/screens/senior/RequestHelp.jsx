@@ -25,23 +25,70 @@ export default function RequestHelp() {
   const [isListening, setIsListening] = useState(false);
   const [voiceError, setVoiceError] = useState('');
   const recognitionRef = useRef(null);
-  const isListeningRef = useRef(false);
 
   useEffect(() => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    console.log('%c[Voice Debug] SpeechRecognition API available:', 'color: #3498db; font-weight: bold', !!SpeechRecognition);
+    if (startVoice) {
+      setTimeout(() => {
+        startListening();
+      }, 400);
+    }
 
-    if (SpeechRecognition) {
+    return () => {
+      stopListening();
+    };
+  }, []);
+
+  async function startListening() {
+    setVoiceError('');
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      setVoiceError('Speech recognition is not supported in this browser. Please type your request.');
+      return;
+    }
+
+    // Stop any existing instance
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.abort();
+      } catch (e) {}
+    }
+
+    // Step 1: Ensure microphone access
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      try {
+        console.log('%c[Voice Debug] Requesting microphone access...', 'color: #3498db; font-weight: bold');
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        console.log('%c[Voice Debug] Microphone access GRANTED!', 'color: #2ecc71; font-weight: bold');
+        // Stop the probe stream so SpeechRecognition can bind cleanly
+        stream.getTracks().forEach((track) => track.stop());
+      } catch (err) {
+        console.warn('%c[Voice Debug] Mic permission error:', 'color: #e74c3c; font-weight: bold', err);
+        setVoiceError('Microphone access was denied. Please allow microphone permissions in your browser URL bar.');
+        return;
+      }
+    }
+
+    // Step 2: Create fresh instance on-demand
+    try {
       const rec = new SpeechRecognition();
-      rec.lang = 'en-IN';
+      rec.lang = navigator.language || 'en-IN';
       rec.continuous = true;
       rec.interimResults = true;
+      rec.maxAlternatives = 1;
 
       rec.onstart = () => {
-        console.log('%c[Voice Debug] Speech recognition STARTED listening', 'color: #2ecc71; font-weight: bold');
+        console.log('%c[Voice Debug] >>> SPEECH RECOGNITION LIVE & LISTENING <<<', 'color: #2ecc71; font-weight: bold');
         setIsListening(true);
-        isListeningRef.current = true;
         setVoiceError('');
+      };
+
+      rec.onaudiostart = () => {
+        console.log('[Voice Debug] Audio capture started');
+      };
+
+      rec.onspeechstart = () => {
+        console.log('[Voice Debug] Speech detected!');
       };
 
       rec.onresult = (event) => {
@@ -49,113 +96,60 @@ export default function RequestHelp() {
         for (let i = 0; i < event.results.length; i++) {
           transcript += event.results[i][0].transcript;
         }
-        console.log('%c[Voice Debug] Speech recognition RESULT:', 'color: #f39c12; font-weight: bold', transcript);
-        if (transcript.trim()) {
+        console.log('%c[Voice Debug] Spoken transcript:', 'color: #f39c12; font-weight: bold', transcript);
+        if (transcript) {
           setForm((prev) => ({
             ...prev,
-            description: transcript.trim(),
+            description: transcript,
           }));
         }
       };
 
       rec.onerror = (event) => {
-        console.warn('%c[Voice Debug] Speech recognition ERROR:', 'color: #e74c3c; font-weight: bold', event.error, event);
+        console.warn('%c[Voice Debug] Speech Error Event:', 'color: #e74c3c; font-weight: bold', event.error);
         if (event.error === 'not-allowed') {
-          setVoiceError('Microphone access blocked. Please allow microphone permissions in your browser.');
-          setIsListening(false);
-          isListeningRef.current = false;
+          setVoiceError('Microphone access blocked. Please click the mic icon in your browser address bar and choose "Allow".');
         } else if (event.error === 'no-speech') {
-          console.log('[Voice Debug] No speech detected yet, continuing...');
+          console.log('[Voice Debug] No speech heard yet, keep speaking...');
         } else if (event.error === 'network') {
-          setVoiceError('Speech recognition service unreachable. You can type your request directly.');
-          setIsListening(false);
-          isListeningRef.current = false;
+          setVoiceError('Google speech recognition server unreachable. Please type your request.');
         } else {
           setVoiceError(`Voice note: ${event.error}`);
         }
+        setIsListening(false);
       };
 
       rec.onend = () => {
-        console.log('%c[Voice Debug] Speech recognition ENDED', 'color: #95a5a6; font-weight: bold', { isListening: isListeningRef.current });
-        if (isListeningRef.current) {
-          try {
-            console.log('[Voice Debug] Restarting recognition stream...');
-            rec.start();
-          } catch (e) {
-            console.warn('[Voice Debug] Restart failed:', e);
-            setIsListening(false);
-            isListeningRef.current = false;
-          }
-        } else {
-          setIsListening(false);
-        }
+        console.log('%c[Voice Debug] Speech Recognition ended', 'color: #95a5a6; font-weight: bold');
+        setIsListening(false);
       };
 
       recognitionRef.current = rec;
-    } else {
-      setVoiceError('Voice speech recognition is not supported in this browser. Please type your request.');
-    }
-
-    if (startVoice) {
-      console.log('[Voice Debug] startVoice query param detected, attempting auto-start...');
-      setTimeout(() => {
-        startListeningSession();
-      }, 500);
-    }
-
-    return () => {
-      isListeningRef.current = false;
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.stop();
-        } catch (e) {}
-      }
-    };
-  }, []);
-
-  function startListeningSession() {
-    setVoiceError('');
-    console.log('%c[Voice Debug] startListeningSession called', 'color: #3498db; font-weight: bold');
-    if (!recognitionRef.current) {
-      setVoiceError('Voice recognition is not supported in this browser. Please type your request.');
-      return;
-    }
-
-    try {
-      isListeningRef.current = true;
-      recognitionRef.current.start();
+      rec.start();
       setIsListening(true);
-      console.log('[Voice Debug] rec.start() executed successfully');
     } catch (err) {
-      console.warn('[Voice Debug] rec.start() throw exception:', err);
-      try {
-        recognitionRef.current.stop();
-        setTimeout(() => {
-          if (isListeningRef.current) {
-            recognitionRef.current.start();
-            setIsListening(true);
-          }
-        }, 150);
-      } catch (e) {}
+      console.error('%c[Voice Debug] Failed to start recognition:', 'color: #e74c3c; font-weight: bold', err);
+      setVoiceError(`Could not start voice: ${err.message || err}`);
+      setIsListening(false);
     }
   }
 
-  function stopListeningSession() {
-    console.log('%c[Voice Debug] stopListeningSession called', 'color: #e74c3c; font-weight: bold');
-    isListeningRef.current = false;
+  function stopListening() {
+    console.log('%c[Voice Debug] Stop listening requested', 'color: #e74c3c; font-weight: bold');
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
       } catch (e) {}
+      recognitionRef.current = null;
     }
     setIsListening(false);
   }
 
   function toggleVoice() {
     if (isListening) {
-      stopListeningSession();
+      stopListening();
     } else {
-      startListeningSession();
+      startListening();
     }
   }
 
@@ -303,7 +297,7 @@ export default function RequestHelp() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: 6,
-                boxShadow: isListening ? '0 0 10px rgba(231,76,60,0.6)' : 'none',
+                boxShadow: isListening ? '0 0 12px rgba(231,76,60,0.7)' : 'none',
                 transition: 'all 0.2s ease',
               }}
             >
