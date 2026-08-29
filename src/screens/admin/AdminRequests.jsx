@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { URGENCY, REQUEST_STATUS, SERVICE_LABELS, SERVICE_ICONS } from '../../data/mockData';
+import { URGENCY, REQUEST_STATUS, SERVICE_LABELS, SERVICE_ICONS } from '../../constants';
 import RequestCard from '../../components/common/RequestCard';
 export default function AdminRequests() {
-  const { requests } = useApp();
+  const { requests, currentUser } = useApp();
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterUrgency, setFilterUrgency] = useState('all');
   const filtered = requests.filter((r) => {
@@ -17,7 +17,7 @@ export default function AdminRequests() {
         <div className="page-header-inner">
           <div>
             <h2 className="page-title">All Requests</h2>
-            <p className="page-subtitle">{requests.length} requests in 400001</p>
+            <p className="page-subtitle">{requests.length} requests in {currentUser?.pincode || 'your area'}</p>
           </div>
         </div>
       </div>

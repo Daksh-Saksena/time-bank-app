@@ -1,5 +1,5 @@
 import { useApp } from '../../context/AppContext';
-import { formatMinutes } from '../../data/mockData';
+import { formatMinutes } from '../../constants';
 import StarRating from '../../components/common/StarRating';
 function MiniBar({ value, max, color }) {
   return (

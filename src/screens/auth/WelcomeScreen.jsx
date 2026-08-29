@@ -1,15 +1,8 @@
 import { useNavigate } from 'react-router-dom';
-import { DEMO_ACCOUNTS } from '../../data/mockData';
 import { useApp } from '../../context/AppContext';
 export default function WelcomeScreen() {
   const navigate = useNavigate();
   const { login } = useApp();
-  function handleDemoLogin(userId) {
-    login(userId);
-    const account = DEMO_ACCOUNTS.find((a) => a.userId === userId);
-    const roleRoutes = { senior: '/senior/home', volunteer: '/volunteer/home', admin: '/admin/dashboard' };
-    navigate(roleRoutes[account.role] || '/');
-  }
   return (
     <div className="page-content no-nav" style={{ background: 'linear-gradient(160deg, #1B4F72 0%, #2E86AB 60%, #1B4F72 100%)', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 'var(--space-8) var(--space-6)', textAlign: 'center' }}>
@@ -42,27 +35,6 @@ export default function WelcomeScreen() {
         <button className="btn btn-outline btn-full" onClick={() => navigate('/onboarding')} style={{ marginBottom: 'var(--space-6)' }}>
           Create Account
         </button>
-        <div className="divider" style={{ position: 'relative' }}>
-          <span style={{ position: 'absolute', left: '50%', top: '-10px', transform: 'translateX(-50%)', background: 'white', padding: '0 var(--space-3)', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-xs)', fontWeight: 600 }}>
-            DEMO - Jump In As
-          </span>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-          {DEMO_ACCOUNTS.map((account) => (
-            <button
-              key={account.userId}
-              className="btn btn-ghost btn-full"
-              onClick={() => handleDemoLogin(account.userId)}
-              style={{ justifyContent: 'flex-start', gap: 'var(--space-4)', padding: 'var(--space-3) var(--space-4)' }}
-            >
-              <span style={{ fontSize: '1.8rem' }}>{account.emoji}</span>
-              <div style={{ textAlign: 'left' }}>
-                <div style={{ fontWeight: 700, color: 'var(--color-text-primary)' }}>{account.label}</div>
-                <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>{account.sublabel}</div>
-              </div>
-            </button>
-          ))}
-        </div>
       </div>
     </div>
   );

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import Modal from './Modal';
 import StarRating from './StarRating';
 import { useApp } from '../../context/AppContext';
-import { ROLES } from '../../data/mockData';
+import { ROLES } from '../../constants';
 export default function RatingModal() {
   const { pendingRating, dismissRating, submitRating, currentUser, requests } = useApp();
   const [stars, setStars] = useState(0);

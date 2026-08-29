@@ -1,6 +1,6 @@
 // ---- TimeLedger.jsx ---- Time ledger screen (shared between roles)
 import { useApp } from '../../context/AppContext';
-import { formatMinutes, SERVICE_ICONS } from '../../data/mockData';
+import { formatMinutes, SERVICE_ICONS } from '../../constants';
 
 function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString('en-IN', {

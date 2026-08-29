@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
-import { SERVICE_TYPES, SERVICE_LABELS, SERVICE_ICONS, URGENCY } from '../../data/mockData';
+import { SERVICE_TYPES, SERVICE_LABELS, SERVICE_ICONS, URGENCY } from '../../constants';
 export default function RequestHelp() {
   const { createRequest, currentUser, seniorMode } = useApp();
   const navigate = useNavigate();
@@ -45,16 +45,23 @@ export default function RequestHelp() {
     if (!recognitionRef.current) {
       setIsListening(true);
       setTimeout(() => {
-        setForm((prev) => ({ ...prev, description: 'I need someone to pick up my blood pressure medicines from the pharmacy.' }));
+        setForm((prev) => ({ ...prev, description: 'I need someone to pick up my blood pressure medicines from the pharmacy near Colaba market.' }));
         setIsListening(false);
-      }, 3000);
+      }, 2000);
       return;
     }
     if (isListening) {
-      recognitionRef.current.stop();
+      try {
+        recognitionRef.current.stop();
+      } catch (err) {}
+      setIsListening(false);
     } else {
-      setIsListening(true);
-      recognitionRef.current.start();
+      try {
+        recognitionRef.current.start();
+        setIsListening(true);
+      } catch (err) {
+        console.warn('Speech recognition start note:', err);
+      }
     }
   }
   function handleSubmit(e) {
@@ -66,10 +73,10 @@ export default function RequestHelp() {
     return (
       <div className={`page-content no-nav${seniorMode ? ' senior-mode' : ''}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', padding: 'var(--space-6)' }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '5rem', marginBottom: 'var(--space-5)' }}></div>
-          <h2 style={{ marginBottom: 'var(--space-3)' }}>Request Sent!</h2>
-          <p style={{ color: 'var(--color-text-muted)', marginBottom: 'var(--space-6)', fontSize: 'var(--font-size-base)' }}>
-            Your request has been posted to the community. A volunteer in your area will accept it shortly. You'll receive an SMS notification.
+          <div style={{ fontSize: '4rem', marginBottom: 'var(--space-4)' }}>✓</div>
+          <h2 style={{ marginBottom: 'var(--space-3)' }}>Request Posted!</h2>
+          <p style={{ color: 'var(--color-text-muted)', marginBottom: 'var(--space-6)', fontSize: 'var(--font-size-base)', lineHeight: 1.6 }}>
+            Your request has been published to the community feed. Volunteers in your pincode can now see and accept it.
           </p>
           <button className="btn btn-primary btn-full btn-lg" onClick={() => navigate('/senior/home')}>
             Back to Home

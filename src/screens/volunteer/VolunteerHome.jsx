@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
-import { formatMinutes, REQUEST_STATUS, SERVICE_ICONS, SERVICE_LABELS } from '../../data/mockData';
+import { formatMinutes, REQUEST_STATUS, SERVICE_ICONS, SERVICE_LABELS } from '../../constants';
 export default function VolunteerHome() {
   const { currentUser, getOpenRequests, getVolunteerActiveRequest, acceptRequest } = useApp();
   const navigate = useNavigate();

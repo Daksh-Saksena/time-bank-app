@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
-import { ROLES, KYC_STATUS } from '../../data/mockData';
+import { ROLES, KYC_STATUS } from '../../constants';
+import { supabase } from '../../lib/supabase';
 const TOTAL_STEPS = 5;
 export default function OnboardingFlow() {
   const navigate = useNavigate();
@@ -28,12 +29,65 @@ export default function OnboardingFlow() {
       nextStep();
     }, 2000);
   }
-  function handleFinish() {
-    const roleUserMap = { senior: 'user-001', volunteer: 'user-002', admin: 'user-003' };
-    const userId = roleUserMap[form.role] || 'user-001';
-    login(userId);
-    const routeMap = { senior: '/senior/home', volunteer: '/volunteer/home', admin: '/admin/dashboard' };
-    navigate(routeMap[form.role] || '/senior/home');
+  async function handleFinish() {
+    setLoading(true);
+    try {
+      const {
+        data: { user: authUser },
+      } = await supabase.auth.getUser();
+
+      const isUuid = (id) =>
+        typeof id === 'string' &&
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
+      const profilePayload = {
+        id: authUser?.id || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `user-${Date.now()}`),
+        phone: form.phone ? (form.phone.startsWith('+') ? form.phone : `+91${form.phone}`) : null,
+        name: form.name || 'New Member',
+        age: form.age ? parseInt(form.age, 10) : null,
+        role: form.role || ROLES.SENIOR,
+        pincode: form.pincode || '400001',
+        area: form.area || 'Mumbai',
+        kyc_status: KYC_STATUS.PENDING,
+        time_balance: form.role === ROLES.SENIOR ? 120 : 0,
+        senior_mode: form.role === ROLES.SENIOR,
+      };
+
+      if (authUser?.id && isUuid(authUser.id)) {
+        try {
+          const { data: profile, error } = await supabase
+            .from('profiles')
+            .upsert([profilePayload])
+            .select()
+            .single();
+
+          if (error) {
+            console.warn('Profile save note:', error);
+          }
+          if (profile) {
+            login(profile);
+          } else {
+            login(profilePayload);
+          }
+        } catch (err) {
+          login(profilePayload);
+        }
+      } else {
+        login(profilePayload);
+      }
+
+      const routeMap = {
+        senior: '/senior/home',
+        volunteer: '/volunteer/home',
+        admin: '/admin/dashboard',
+      };
+      navigate(routeMap[form.role] || '/senior/home');
+    } catch (err) {
+      console.error('Onboarding finish error:', err);
+      navigate('/');
+    } finally {
+      setLoading(false);
+    }
   }
   return (
     <div className="page-content no-nav" style={{ background: 'white', minHeight: '100vh' }}>

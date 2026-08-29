@@ -1,39 +1,60 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
-import { ROLES } from '../../data/mockData';
-const NAV_ITEMS = {
-  [ROLES.SENIOR]: [
-    { path: '/senior/home', icon: '', label: 'Home' },
-    { path: '/senior/request', icon: '', label: 'Request' },
-    { path: '/senior/nearby', icon: '', label: 'Nearby' },
-    { path: '/senior/ledger', icon: <img src="/logo.png" alt="Time" style={{ width: '1em', height: '1em', verticalAlign: 'middle' }} />, label: 'Time' },
-    { path: '/senior/profile', icon: '', label: 'Profile' },
-  ],
-  [ROLES.VOLUNTEER]: [
-    { path: '/volunteer/home', icon: '', label: 'Home' },
-    { path: '/volunteer/nearby', icon: '', label: 'Requests' },
-    { path: '/volunteer/task', icon: '', label: 'Active' },
-    { path: '/volunteer/ledger', icon: <img src="/logo.png" alt="Time" style={{ width: '1em', height: '1em', verticalAlign: 'middle' }} />, label: 'Time' },
-    { path: '/volunteer/impact', icon: '', label: 'Impact' },
-    { path: '/volunteer/profile', icon: '', label: 'Profile' },
-  ],
-  [ROLES.ADMIN]: [
-    { path: '/admin/dashboard', icon: '', label: 'Dashboard' },
-    { path: '/admin/approvals', icon: '', label: 'Approvals' },
-    { path: '/admin/requests', icon: '', label: 'Requests' },
-    { path: '/admin/members', icon: '', label: 'Members' },
-    { path: '/admin/profile', icon: '', label: 'Profile' },
-  ],
-};
+import { ROLES } from '../../constants';
+import {
+  Home,
+  PlusCircle,
+  MapPin,
+  Clock,
+  User,
+  Zap,
+  BarChart3,
+  LayoutDashboard,
+  CheckSquare,
+  ClipboardList,
+  Users,
+} from 'lucide-react';
+
 export default function BottomNav() {
   const { currentUser, seniorMode } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const iconSize = seniorMode ? 24 : 20;
+
+  const NAV_ITEMS = {
+    [ROLES.SENIOR]: [
+      { path: '/senior/home', icon: <Home size={iconSize} />, label: 'Home' },
+      { path: '/senior/request', icon: <PlusCircle size={iconSize} />, label: 'Request' },
+      { path: '/senior/nearby', icon: <MapPin size={iconSize} />, label: 'Nearby' },
+      { path: '/senior/ledger', icon: <Clock size={iconSize} />, label: 'Time' },
+      { path: '/senior/profile', icon: <User size={iconSize} />, label: 'Profile' },
+    ],
+    [ROLES.VOLUNTEER]: [
+      { path: '/volunteer/home', icon: <Home size={iconSize} />, label: 'Home' },
+      { path: '/volunteer/nearby', icon: <MapPin size={iconSize} />, label: 'Requests' },
+      { path: '/volunteer/task', icon: <Zap size={iconSize} />, label: 'Active' },
+      { path: '/volunteer/ledger', icon: <Clock size={iconSize} />, label: 'Time' },
+      { path: '/volunteer/impact', icon: <BarChart3 size={iconSize} />, label: 'Impact' },
+      { path: '/volunteer/profile', icon: <User size={iconSize} />, label: 'Profile' },
+    ],
+    [ROLES.ADMIN]: [
+      { path: '/admin/dashboard', icon: <LayoutDashboard size={iconSize} />, label: 'Dashboard' },
+      { path: '/admin/approvals', icon: <CheckSquare size={iconSize} />, label: 'Approvals' },
+      { path: '/admin/requests', icon: <ClipboardList size={iconSize} />, label: 'Requests' },
+      { path: '/admin/members', icon: <Users size={iconSize} />, label: 'Members' },
+      { path: '/admin/profile', icon: <User size={iconSize} />, label: 'Profile' },
+    ],
+  };
+
   const items = NAV_ITEMS[currentUser?.role] || [];
+
   return (
     <nav className="bottom-nav" role="navigation" aria-label="Main navigation">
       {items.map((item) => {
-        const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + '/');
+        const isActive =
+          location.pathname === item.path ||
+          (item.path !== '/' && location.pathname.startsWith(item.path + '/'));
         return (
           <button
             key={item.path}
@@ -42,8 +63,20 @@ export default function BottomNav() {
             aria-label={item.label}
             aria-current={isActive ? 'page' : undefined}
           >
-            <span style={{ fontSize: seniorMode ? '1.5rem' : '1.3rem' }} aria-hidden="true">{item.icon}</span>
-            <span>{item.label}</span>
+            <span
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: 2,
+              }}
+              aria-hidden="true"
+            >
+              {item.icon}
+            </span>
+            <span style={{ fontSize: '0.72rem', fontWeight: isActive ? 700 : 500 }}>
+              {item.label}
+            </span>
           </button>
         );
       })}

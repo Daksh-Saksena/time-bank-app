@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
-import { formatMinutes, REQUEST_STATUS } from '../../data/mockData';
+import { formatMinutes, REQUEST_STATUS } from '../../constants';
 import { SOSButton } from '../../components/common/SOSButton';
 import SeniorQRModal from '../../components/common/SeniorQRModal';
 export default function SeniorHome() {
@@ -24,14 +24,14 @@ export default function SeniorHome() {
             <div style={{ display: 'flex', gap: 'var(--space-4)' }}>
               <div>
                 <div style={{ fontSize: 'var(--font-size-xl)', fontWeight: 800, color: 'white' }}>
-                  {formatMinutes(currentUser?.timeBalance || 0)}
+                  {formatMinutes(currentUser?.time_balance ?? currentUser?.timeBalance ?? 0)}
                 </div>
                 <div style={{ fontSize: 'var(--font-size-xs)', opacity: 0.8 }}>Time Balance</div>
               </div>
               <div style={{ width: 1, background: 'rgba(255,255,255,0.3)' }} />
               <div>
                 <div style={{ fontSize: 'var(--font-size-xl)', fontWeight: 800, color: 'white' }}>
-                  400001
+                  {currentUser?.pincode || '—'}
                 </div>
                 <div style={{ fontSize: 'var(--font-size-xs)', opacity: 0.8 }}>Your Pincode</div>
               </div>
@@ -61,19 +61,18 @@ export default function SeniorHome() {
       </div>
       <div className="service-grid">
         {[
-          { type: 'medicine', icon: '', label: 'Medicine' },
-          { type: 'groceries', icon: '', label: 'Groceries' },
-          { type: 'bank', icon: '', label: 'Bank Visit' },
-          { type: 'walk', icon: '', label: 'Walk / Company' },
-        ].map(({ type, icon, label }) => (
+          { type: 'medicine', label: 'Medicine' },
+          { type: 'groceries', label: 'Groceries' },
+          { type: 'bank', label: 'Bank Visit' },
+          { type: 'walk', label: 'Walk / Company' },
+        ].map(({ type, label }) => (
           <button
             key={type}
             className="service-btn"
             onClick={() => navigate(`/senior/request?type=${type}`)}
             aria-label={`Request ${label} assistance`}
           >
-            <span className="service-btn-icon" aria-hidden="true">{icon}</span>
-            <span className="service-btn-label">{label}</span>
+            <span className="service-btn-label" style={{ fontWeight: 700 }}>{label}</span>
           </button>
         ))}
       </div>

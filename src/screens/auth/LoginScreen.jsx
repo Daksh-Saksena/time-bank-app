@@ -1,40 +1,104 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
-import { DEMO_ACCOUNTS } from '../../data/mockData';
+import { supabase } from '../../lib/supabase';
+
 export default function LoginScreen() {
-  const { login } = useApp();
+  const { login, refreshProfile } = useApp();
   const navigate = useNavigate();
   const [phone, setPhone] = useState('');
   const [step, setStep] = useState('phone');
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  function handleSendOtp(e) {
+  const [info, setInfo] = useState('');
+
+  async function handleSendOtp(e) {
     e.preventDefault();
     if (!phone || phone.length < 10) {
       setError('Please enter a valid 10-digit phone number');
       return;
     }
     setError('');
+    setInfo('');
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+
+    try {
+      const cleanDigits = phone.replace(/\D/g, '');
+      const fullPhone = phone.startsWith('+') ? phone : `+91${cleanDigits}`;
+      
+      const { error: otpErr } = await supabase.auth.signInWithOtp({
+        phone: fullPhone,
+        options: {
+          shouldCreateUser: true,
+          channel: 'sms',
+        },
+      });
+
+      if (otpErr) {
+        console.error('Supabase OTP Error:', otpErr);
+        setError(otpErr.message || 'Error sending SMS. Please check your Twilio configuration in Supabase.');
+        return;
+      }
+
+      setInfo(`OTP sent successfully to ${fullPhone}`);
       setStep('otp');
-    }, 1200);
+    } catch (err) {
+      console.error('Unexpected OTP Error:', err);
+      setError(err.message || 'Failed to send OTP. Please check your connection.');
+    } finally {
+      setLoading(false);
+    }
   }
-  function handleVerifyOtp(e) {
+
+  async function handleVerifyOtp(e) {
     e.preventDefault();
-    if (otp !== '1234') {
-      setError('Incorrect OTP. (Use 1234 for this demo)');
+    if (!otp || otp.length < 4) {
+      setError('Please enter the OTP code');
       return;
     }
     setError('');
     setLoading(true);
-    setTimeout(() => {
-      login('user-001');
-      navigate('/senior/home');
-    }, 1000);
+
+    try {
+      const cleanDigits = phone.replace(/\D/g, '');
+      const fullPhone = phone.startsWith('+') ? phone : `+91${cleanDigits}`;
+      const { data, error: verifyErr } = await supabase.auth.verifyOtp({
+        phone: fullPhone,
+        token: otp.trim(),
+        type: 'sms',
+      });
+
+      if (verifyErr) {
+        throw verifyErr;
+      }
+
+      if (data?.user) {
+        // Fetch or create profile
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', data.user.id)
+          .maybeSingle();
+
+        if (profile) {
+          login(profile);
+          const routeMap = {
+            senior: '/senior/home',
+            volunteer: '/volunteer/home',
+            admin: '/admin/dashboard',
+          };
+          navigate(routeMap[profile.role] || '/');
+        } else {
+          // If user exists in auth but has no profile yet, send to onboarding
+          navigate('/onboarding');
+        }
+      }
+    } catch (err) {
+      setError(err.message || 'Verification failed. Please check the code and try again.');
+    } finally {
+      setLoading(false);
+    }
   }
   return (
     <div className="page-content no-nav" style={{ background: 'white', minHeight: '100vh' }}>
@@ -54,9 +118,6 @@ export default function LoginScreen() {
       <div style={{ padding: 'var(--space-6) var(--space-5)', marginTop: '-var(--space-4)' }}>
         {step === 'phone' ? (
           <form onSubmit={handleSendOtp}>
-            <div className="alert alert-info" style={{ marginBottom: 'var(--space-5)' }}>
-              This is a prototype. Enter any valid phone number and use OTP <strong>1234</strong> to sign in.
-            </div>
             <div className="input-group" style={{ marginBottom: 'var(--space-5)' }}>
               <label className="input-label">Phone Number</label>
               <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
@@ -72,6 +133,7 @@ export default function LoginScreen() {
               </div>
             </div>
             {error && <p style={{ color: 'var(--color-danger)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-3)' }}>{error}</p>}
+            {info && <p style={{ color: 'var(--color-primary)', fontSize: 'var(--font-size-xs)', marginBottom: 'var(--space-3)', background: 'var(--color-surface-alt)', padding: 'var(--space-2) var(--space-3)', borderRadius: 'var(--radius-sm)' }}>{info}</p>}
             <button className="btn btn-primary btn-full btn-lg" type="submit" disabled={loading}>
               {loading ? 'Sending OTP...' : 'Send OTP'}
             </button>
@@ -79,16 +141,16 @@ export default function LoginScreen() {
         ) : (
           <form onSubmit={handleVerifyOtp}>
             <p style={{ color: 'var(--color-text-muted)', marginBottom: 'var(--space-5)', textAlign: 'center', fontSize: 'var(--font-size-sm)' }}>
-              Enter the OTP sent to +91 {phone} (Use <strong>1234</strong>)
+              Enter the OTP sent to +91 {phone}
             </p>
             <div className="input-group" style={{ marginBottom: 'var(--space-5)' }}>
               <label className="input-label" style={{ textAlign: 'center' }}>One-Time Password</label>
               <input
                 type="number"
                 className="input"
-                placeholder="Enter 4-digit OTP"
+                placeholder="Enter 6-digit OTP"
                 value={otp}
-                onChange={(e) => setOtp(e.target.value.slice(0, 4))}
+                onChange={(e) => setOtp(e.target.value.slice(0, 6))}
                 style={{ textAlign: 'center', fontSize: 'var(--font-size-xl)', letterSpacing: '0.3em' }}
                 autoFocus
               />
@@ -102,23 +164,6 @@ export default function LoginScreen() {
             </button>
           </form>
         )}
-        <div className="divider" style={{ marginTop: 'var(--space-8)' }} />
-        <p style={{ textAlign: 'center', fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-4)' }}>
-          Quick demo access
-        </p>
-        <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-          {DEMO_ACCOUNTS.map((a) => (
-            <button
-              key={a.userId}
-              className="btn btn-ghost"
-              style={{ flex: 1, flexDirection: 'column', gap: 4, fontSize: 'var(--font-size-xs)', padding: 'var(--space-3) var(--space-2)' }}
-              onClick={() => { login(a.userId); const r = { senior: '/senior/home', volunteer: '/volunteer/home', admin: '/admin/dashboard' }; navigate(r[a.role]); }}
-            >
-              <span style={{ fontSize: '1.5rem' }}>{a.emoji}</span>
-              <span>{a.label.split(' ')[0]}</span>
-            </button>
-          ))}
-        </div>
       </div>
     </div>
   );

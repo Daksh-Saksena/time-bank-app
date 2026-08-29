@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
-import { formatMinutes, SERVICE_ICONS, SERVICE_LABELS, REQUEST_STATUS } from '../../data/mockData';
+import { formatMinutes, SERVICE_ICONS, SERVICE_LABELS, REQUEST_STATUS } from '../../constants';
 import Modal from '../../components/common/Modal';
 function PinEntry({ expectedPin, onSuccess, onCancel, title }) {
   const [pin, setPin] = useState(['', '', '', '']);

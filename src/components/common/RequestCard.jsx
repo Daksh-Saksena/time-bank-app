@@ -1,4 +1,4 @@
-import { SERVICE_ICONS, SERVICE_LABELS, URGENCY, REQUEST_STATUS, formatMinutes } from '../../data/mockData';
+import { SERVICE_ICONS, SERVICE_LABELS, URGENCY, REQUEST_STATUS, formatMinutes } from '../../constants';
 function statusBadgeClass(status) {
   const map = {
     open: 'badge-status-open',

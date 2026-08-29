@@ -1,88 +1,136 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
-import StarRating from '../../components/common/StarRating';
-import { KYC_STATUS, formatMinutes } from '../../data/mockData';
-import { DEMO_ACCOUNTS } from '../../data/mockData';
-function kycBadgeClass(status) {
-  const m = { verified: 'badge-kyc-verified', pending: 'badge-kyc-pending', rejected: 'badge-kyc-rejected', not_started: 'badge-status-cancelled' };
-  return m[status] || '';
-}
+import { KYC_STATUS, formatMinutes } from '../../constants';
+import {
+  Bell,
+  KeyRound,
+  ClipboardList,
+  MessageCircle,
+  ShieldCheck,
+  Power,
+  ChevronRight,
+} from 'lucide-react';
+
 export default function SeniorProfile() {
-  const { currentUser, logout, seniorMode, toggleSeniorMode, login } = useApp();
+  const { currentUser, seniorMode, toggleSeniorMode, logout } = useApp();
   const navigate = useNavigate();
-  const ratings = [];
-  const avgRating = currentUser?.rating || 0;
+  const [toastMessage, setToastMessage] = useState('');
+
+  function showToast(msg) {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(''), 3000);
+  }
+
   function handleLogout() {
     logout();
     navigate('/');
   }
+
+  async function handleNotificationClick() {
+    if ('Notification' in window) {
+      try {
+        const perm = await Notification.requestPermission();
+        if (perm === 'granted') {
+          new Notification('Time Bank of India', {
+            body: 'Notifications enabled! You will receive updates about your service requests.',
+            icon: '/logo.png',
+          });
+          showToast('Notifications enabled! Sent test notification.');
+        } else {
+          showToast('Notifications permission: ' + perm);
+        }
+      } catch (e) {
+        showToast('Notifications are active for your account');
+      }
+    } else {
+      showToast('Notifications are active for your account');
+    }
+  }
+
+  function handleHelpSupport() {
+    window.open('https://wa.me/919057987666?text=Hello%20Time%20Bank%20Support', '_blank');
+  }
+
   return (
     <div className="page-content">
       <div className="page-header">
         <div className="page-header-inner">
-          <h2 className="page-title">Profile</h2>
+          <h2 className="page-title">My Profile</h2>
           <button className="btn btn-ghost btn-sm" onClick={handleLogout}>Sign Out</button>
         </div>
       </div>
+
+      {toastMessage && (
+        <div
+          style={{
+            margin: 'var(--space-2) var(--space-5)',
+            padding: 'var(--space-3) var(--space-4)',
+            background: 'var(--color-primary)',
+            color: 'white',
+            borderRadius: 'var(--radius-md)',
+            fontSize: 'var(--font-size-sm)',
+            fontWeight: 600,
+            textAlign: 'center',
+            animation: 'fadeIn 0.2s ease',
+          }}
+        >
+          {toastMessage}
+        </div>
+      )}
+
       <div style={{ padding: 'var(--space-5)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-5)', marginBottom: 'var(--space-5)' }}>
-          <div className="avatar avatar-lg" style={{ background: 'var(--color-primary)', flexShrink: 0 }}>
-            {currentUser?.name?.[0] || '?'}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', marginBottom: 'var(--space-5)' }}>
+          <div className="avatar avatar-xl" style={{ background: 'var(--color-primary)' }}>
+            {currentUser?.name?.[0] || 'S'}
           </div>
           <div>
-            <h3 style={{ marginBottom: 4 }}>{currentUser?.name}</h3>
-            <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', marginBottom: 8 }}>
-              {currentUser?.area} · {currentUser?.pincode}
+            <h3 style={{ fontSize: 'var(--font-size-lg)', marginBottom: 4 }}>{currentUser?.name || 'Senior Member'}</h3>
+            <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', marginBottom: 4 }}>
+              {currentUser?.phone || '+91 XXXXX XXXXX'}
             </div>
-            <div className="flex items-center gap-2">
-              <StarRating value={avgRating} readonly size="sm" />
-              <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>
-                {avgRating.toFixed(1)} ({currentUser?.ratingCount || 0} reviews)
-              </span>
+            <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
+              {currentUser?.area || 'Colaba, Mumbai'} · Age {currentUser?.age || 70}
             </div>
           </div>
         </div>
+
+        <div className="card" style={{ marginBottom: 'var(--space-4)' }}>
+          <div className="flex justify-between items-center" style={{ marginBottom: 'var(--space-3)' }}>
+            <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <ShieldCheck size={18} color="var(--color-primary)" />
+              <span>Identity Verification</span>
+            </span>
+            <span className={`badge ${currentUser?.kyc_status === KYC_STATUS.VERIFIED || currentUser?.kyc?.status === KYC_STATUS.VERIFIED ? 'badge-kyc-verified' : 'badge-kyc-pending'}`}>
+              {currentUser?.kyc_status === KYC_STATUS.VERIFIED || currentUser?.kyc?.status === KYC_STATUS.VERIFIED ? '✓ Verified' : 'Pending'}
+            </span>
+          </div>
+          <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
+            Aadhaar: •••• •••• {currentUser?.aadhaarLast4 || currentUser?.kyc?.aadhaarLast4 || 'XXXX'}
+          </div>
+        </div>
+
         <div className="card" style={{ marginBottom: 'var(--space-4)' }}>
           <div className="flex justify-between items-center">
             <div>
-              <div style={{ fontWeight: 600, marginBottom: 4 }}>Identity Verification</div>
-              <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>
-                {currentUser?.kyc?.documentType || 'Aadhaar Card'} ****{currentUser?.kyc?.aadhaarLast4}
-              </div>
+              <div style={{ fontWeight: 600, fontSize: 'var(--font-size-base)' }}>Time Balance</div>
+              <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>Available to receive help</div>
             </div>
-            <span className={`badge ${kycBadgeClass(currentUser?.kyc?.status)}`}>
-              {currentUser?.kyc?.status === KYC_STATUS.VERIFIED ? '✓ Verified' :
-                currentUser?.kyc?.status === KYC_STATUS.PENDING ? ' Pending' : '✗ Rejected'}
-            </span>
+            <div style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 800, color: 'var(--color-primary)' }}>
+              {formatMinutes(currentUser?.time_balance || currentUser?.timeBalance || 120)}
+            </div>
           </div>
-          {currentUser?.kyc?.verifiedOn && (
-            <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', marginTop: 'var(--space-2)' }}>
-              Verified on {currentUser.kyc.verifiedOn}
-            </div>
-          )}
         </div>
-        <div className="card" style={{ marginBottom: 'var(--space-4)', background: 'var(--color-primary)', color: 'white' }}>
-          <p style={{ opacity: 0.8, fontSize: 'var(--font-size-sm)', marginBottom: 4 }}>Time Balance</p>
-          <div style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 800 }}>{formatMinutes(currentUser?.timeBalance || 0)}</div>
-          <p style={{ opacity: 0.8, fontSize: 'var(--font-size-xs)', marginTop: 4 }}>Member since {currentUser?.memberSince}</p>
-        </div>
-        {currentUser?.emergencyContact && (
-          <div className="card" style={{ marginBottom: 'var(--space-4)' }}>
-            <div style={{ fontWeight: 600, marginBottom: 'var(--space-2)' }}> Emergency Contact</div>
-            <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)', marginBottom: 'var(--space-2)' }}>
-              {currentUser.emergencyContact.name}
-            </div>
-            <a href={`tel:${currentUser.emergencyContact.phone}`} className="btn btn-outline btn-sm" style={{ display: 'inline-flex' }}>
-              {currentUser.emergencyContact.phone}
-            </a>
-          </div>
-        )}
+
         <div className="card" style={{ marginBottom: 'var(--space-4)' }}>
-          <h4 style={{ marginBottom: 'var(--space-4)' }}>Settings</h4>
+          <h4 style={{ marginBottom: 'var(--space-4)' }}>Settings & Options</h4>
+          
           <div className="flex justify-between items-center" style={{ marginBottom: 'var(--space-4)' }}>
             <div>
-              <div style={{ fontWeight: 600 }}>Senior Citizen Mode</div>
-              <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>Larger text, buttons, and simpler navigation</div>
+              <div style={{ fontWeight: 600, fontSize: 'var(--font-size-base)' }}>Senior Citizen Mode</div>
+              <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
+                Larger text and buttons
+              </div>
             </div>
             <button
               onClick={toggleSeniorMode}
@@ -114,44 +162,59 @@ export default function SeniorProfile() {
               }} />
             </button>
           </div>
-          <div className="divider" />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-            {[
-              { icon: '', label: 'Notifications' },
-              { icon: '', label: 'Change PIN' },
-              { icon: '', label: 'My Requests' },
-              { icon: '', label: 'Help & Support' },
-            ].map(({ icon, label }) => (
-              <button
-                key={label}
-                className="flex items-center gap-3"
-                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 'var(--space-2) 0', width: '100%', textAlign: 'left', fontFamily: 'var(--font-family)', fontSize: 'var(--font-size-base)', color: 'var(--color-text-primary)', minHeight: 'var(--touch-min)' }}
-              >
-                <span style={{ fontSize: '1.3rem' }}>{icon}</span>
-                <span>{label}</span>
-                <span style={{ marginLeft: 'auto', color: 'var(--color-text-muted)' }}>›</span>
-              </button>
-            ))}
+
+          <div className="divider" style={{ margin: 'var(--space-3) 0' }} />
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
+            <button
+              onClick={handleNotificationClick}
+              className="flex items-center gap-3"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 'var(--space-3) 0', width: '100%', textAlign: 'left', fontFamily: 'var(--font-family)', fontSize: 'var(--font-size-base)', color: 'var(--color-text-primary)' }}
+            >
+              <Bell size={18} color="var(--color-text-secondary)" />
+              <span>Notifications</span>
+              <ChevronRight size={18} style={{ marginLeft: 'auto', color: 'var(--color-text-muted)' }} />
+            </button>
+
+            <button
+              onClick={() => showToast('Session PIN is set to default')}
+              className="flex items-center gap-3"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 'var(--space-3) 0', width: '100%', textAlign: 'left', fontFamily: 'var(--font-family)', fontSize: 'var(--font-size-base)', color: 'var(--color-text-primary)' }}
+            >
+              <KeyRound size={18} color="var(--color-text-secondary)" />
+              <span>Security & Session PIN</span>
+              <ChevronRight size={18} style={{ marginLeft: 'auto', color: 'var(--color-text-muted)' }} />
+            </button>
+
+            <button
+              onClick={() => navigate('/senior/nearby')}
+              className="flex items-center gap-3"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 'var(--space-3) 0', width: '100%', textAlign: 'left', fontFamily: 'var(--font-family)', fontSize: 'var(--font-size-base)', color: 'var(--color-text-primary)' }}
+            >
+              <ClipboardList size={18} color="var(--color-text-secondary)" />
+              <span>My Requests & Status</span>
+              <ChevronRight size={18} style={{ marginLeft: 'auto', color: 'var(--color-text-muted)' }} />
+            </button>
+
+            <button
+              onClick={handleHelpSupport}
+              className="flex items-center gap-3"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 'var(--space-3) 0', width: '100%', textAlign: 'left', fontFamily: 'var(--font-family)', fontSize: 'var(--font-size-base)', color: 'var(--color-text-primary)' }}
+            >
+              <MessageCircle size={18} color="#25D366" />
+              <span>Help & Support (WhatsApp)</span>
+              <ChevronRight size={18} style={{ marginLeft: 'auto', color: 'var(--color-text-muted)' }} />
+            </button>
           </div>
         </div>
-        <div className="card" style={{ marginBottom: 'var(--space-4)' }}>
-          <h4 style={{ marginBottom: 'var(--space-3)' }}> Demo: Switch Role</h4>
-          <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-            {DEMO_ACCOUNTS.map((a) => (
-              <button
-                key={a.userId}
-                className="btn btn-ghost"
-                style={{ flex: 1, flexDirection: 'column', gap: 4, fontSize: 'var(--font-size-xs)', padding: 'var(--space-3) var(--space-2)' }}
-                onClick={() => { login(a.userId); const r = { senior: '/senior/home', volunteer: '/volunteer/home', admin: '/admin/dashboard' }; navigate(r[a.role]); }}
-              >
-                <span style={{ fontSize: '1.5rem' }}>{a.emoji}</span>
-                <span>{a.label.split(' ')[0]}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-        <button className="btn btn-ghost btn-full" onClick={handleLogout} style={{ color: 'var(--color-danger)', borderColor: 'var(--color-danger)' }}>
-          Sign Out
+
+        <button
+          className="btn btn-outline btn-full"
+          onClick={handleLogout}
+          style={{ color: 'var(--color-danger)', borderColor: 'var(--color-danger)', marginTop: 'var(--space-4)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+        >
+          <Power size={16} />
+          <span>Sign Out</span>
         </button>
       </div>
     </div>

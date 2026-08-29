@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { KYC_STATUS, ROLES } from '../../data/mockData';
+import { KYC_STATUS, ROLES } from '../../constants';
 import Modal from '../../components/common/Modal';
 function formatDateTime(dateStr) {
   return new Date(dateStr).toLocaleDateString('en-IN', {
@@ -69,10 +69,10 @@ export default function PendingApprovals() {
                 <span className="badge badge-kyc-pending"> Pending</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)', marginBottom: 'var(--space-4)' }}>
-                <div> {user.phone}</div>
-                <div> {user.area} · {user.pincode}</div>
-                <div> {user.kyc.documentType} ****{user.kyc.aadhaarLast4}</div>
-                <div> Submitted {formatDateTime(user.submittedOn)}</div>
+                <div> {user.phone || 'Phone not provided'}</div>
+                <div> {user.area || 'Mumbai'} · {user.pincode || '400001'}</div>
+                <div> {user.document_type || user.documentType || user.kyc?.documentType || 'Aadhaar'} ****{user.aadhaar_last4 || user.aadhaarLast4 || user.kyc?.aadhaarLast4 || 'XXXX'}</div>
+                <div> Submitted {formatDateTime(user.submitted_on || user.submittedOn || user.created_at)}</div>
                 {user.notes && <div> {user.notes}</div>}
               </div>
               <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
@@ -108,7 +108,7 @@ export default function PendingApprovals() {
         {selectedUser && (
           <div>
             <div className="flex items-center gap-3" style={{ marginBottom: 'var(--space-5)' }}>
-              <div className="avatar avatar-lg">{selectedUser.name[0]}</div>
+              <div className="avatar avatar-lg">{selectedUser.name?.[0] || 'U'}</div>
               <div>
                 <h3>{selectedUser.name}</h3>
                 <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>{roleLabel(selectedUser.role)}</div>
@@ -116,11 +116,11 @@ export default function PendingApprovals() {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', marginBottom: 'var(--space-5)' }}>
               {[
-                { label: 'Phone', value: selectedUser.phone },
-                { label: 'Age', value: selectedUser.age },
-                { label: 'Area', value: `${selectedUser.area}, ${selectedUser.pincode}` },
-                { label: 'Document', value: `${selectedUser.kyc.documentType} ****${selectedUser.kyc.aadhaarLast4}` },
-                { label: 'Submitted', value: formatDateTime(selectedUser.submittedOn) },
+                { label: 'Phone', value: selectedUser.phone || '-' },
+                { label: 'Age', value: selectedUser.age || '-' },
+                { label: 'Area', value: `${selectedUser.area || 'Mumbai'}, ${selectedUser.pincode || '400001'}` },
+                { label: 'Document', value: `${selectedUser.document_type || selectedUser.documentType || selectedUser.kyc?.documentType || 'Aadhaar'} ****${selectedUser.aadhaar_last4 || selectedUser.aadhaarLast4 || selectedUser.kyc?.aadhaarLast4 || 'XXXX'}` },
+                { label: 'Submitted', value: formatDateTime(selectedUser.submitted_on || selectedUser.submittedOn || selectedUser.created_at) },
                 { label: 'Notes', value: selectedUser.notes || '-' },
               ].map(({ label, value }) => (
                 <div key={label} className="flex justify-between" style={{ borderBottom: '1px solid var(--color-border)', paddingBottom: 'var(--space-2)' }}>

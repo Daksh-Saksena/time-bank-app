@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
-import { ROLES } from './data/mockData';
+import { ROLES } from './constants';
 import BottomNav from './components/common/BottomNav';
 import RatingModal from './components/common/RatingModal';
 import WelcomeScreen from './screens/auth/WelcomeScreen';
@@ -21,8 +21,15 @@ import AdminRequests from './screens/admin/AdminRequests';
 import AdminMembers from './screens/admin/AdminMembers';
 import AdminProfile from './screens/admin/AdminProfile';
 function ProtectedRoute({ children, allowedRoles }) {
-  const { isLoggedIn, currentUser } = useApp();
-  if (!isLoggedIn) return <Navigate to="/" replace />;
+  const { isLoggedIn, currentUser, loading } = useApp();
+  if (loading && !currentUser) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', color: 'var(--color-primary)', fontWeight: 600 }}>
+        Loading...
+      </div>
+    );
+  }
+  if (!isLoggedIn && !currentUser) return <Navigate to="/" replace />;
   if (allowedRoles && !allowedRoles.includes(currentUser?.role)) {
     const homeMap = { senior: '/senior/home', volunteer: '/volunteer/home', admin: '/admin/dashboard' };
     return <Navigate to={homeMap[currentUser?.role] || '/'} replace />;
@@ -43,7 +50,25 @@ function AppRoutes() {
   const { isLoggedIn, currentUser } = useApp();
   return (
     <Routes>
-      <Route path="/" element={<WelcomeScreen />} />
+      <Route
+        path="/"
+        element={
+          isLoggedIn && currentUser ? (
+            <Navigate
+              to={
+                currentUser.role === ROLES.VOLUNTEER
+                  ? '/volunteer/home'
+                  : currentUser.role === ROLES.ADMIN
+                  ? '/admin/dashboard'
+                  : '/senior/home'
+              }
+              replace
+            />
+          ) : (
+            <WelcomeScreen />
+          )
+        }
+      />
       <Route path="/login" element={<LoginScreen />} />
       <Route path="/onboarding" element={<OnboardingFlow />} />
       <Route path="/senior/*" element={

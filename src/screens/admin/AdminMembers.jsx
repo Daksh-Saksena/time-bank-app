@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { ROLES, KYC_STATUS, formatMinutes } from '../../data/mockData';
+import { ROLES, KYC_STATUS, formatMinutes } from '../../constants';
 import StarRating from '../../components/common/StarRating';
 import Modal from '../../components/common/Modal';
 const roleFilters = [
@@ -10,7 +10,7 @@ const roleFilters = [
   { value: ROLES.ADMIN, label: ' Admin' },
 ];
 export default function AdminMembers() {
-  const { members } = useApp();
+  const { members, currentUser } = useApp();
   const [filterRole, setFilterRole] = useState('all');
   const [selectedMember, setSelectedMember] = useState(null);
   const filtered = filterRole === 'all' ? members : members.filter((m) => m.role === filterRole);
@@ -20,7 +20,9 @@ export default function AdminMembers() {
         <div className="page-header-inner">
           <div>
             <h2 className="page-title">Members</h2>
-            <p className="page-subtitle">Pincode 400001 · {members.length} members</p>
+            <p className="page-subtitle">
+              {currentUser?.pincode ? `Pincode ${currentUser.pincode} · ` : ''}{members.length} members
+            </p>
           </div>
         </div>
       </div>
@@ -50,11 +52,11 @@ export default function AdminMembers() {
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <span className={`badge ${member.kyc?.status === KYC_STATUS.VERIFIED ? 'badge-kyc-verified' : 'badge-kyc-pending'}`} style={{ fontSize: '10px' }}>
-                  {member.kyc?.status === KYC_STATUS.VERIFIED ? '✓' : ''}
+                <span className={`badge ${member.kyc_status === KYC_STATUS.VERIFIED || member.kyc?.status === KYC_STATUS.VERIFIED ? 'badge-kyc-verified' : 'badge-kyc-pending'}`} style={{ fontSize: '10px' }}>
+                  {member.kyc_status === KYC_STATUS.VERIFIED || member.kyc?.status === KYC_STATUS.VERIFIED ? '✓ Verified' : 'Pending'}
                 </span>
                 <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', marginTop: 4 }}>
-                  {formatMinutes(member.timeBalance || 0)}
+                  {formatMinutes(member.time_balance ?? member.timeBalance ?? 0)}
                 </div>
               </div>
             </div>
@@ -66,7 +68,7 @@ export default function AdminMembers() {
           <div>
             <div className="flex items-center gap-4" style={{ marginBottom: 'var(--space-5)' }}>
               <div className="avatar avatar-lg" style={{ background: selectedMember.role === ROLES.VOLUNTEER ? '#27AE60' : 'var(--color-primary)' }}>
-                {selectedMember.name[0]}
+                {selectedMember.name?.[0] || 'M'}
               </div>
               <div>
                 <h3>{selectedMember.name}</h3>
@@ -78,12 +80,12 @@ export default function AdminMembers() {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', marginBottom: 'var(--space-5)' }}>
               {[
-                { label: 'Phone', value: selectedMember.phone },
-                { label: 'Age', value: selectedMember.age },
-                { label: 'Area', value: `${selectedMember.area} · ${selectedMember.pincode}` },
-                { label: 'KYC', value: selectedMember.kyc?.status === KYC_STATUS.VERIFIED ? '✓ Verified' : ' Pending' },
-                { label: 'Time Balance', value: formatMinutes(selectedMember.timeBalance || 0) },
-                { label: 'Member Since', value: selectedMember.memberSince },
+                { label: 'Phone', value: selectedMember.phone || '-' },
+                { label: 'Age', value: selectedMember.age || '-' },
+                { label: 'Area', value: `${selectedMember.area || 'Mumbai'} · ${selectedMember.pincode || '400001'}` },
+                { label: 'KYC', value: selectedMember.kyc_status === KYC_STATUS.VERIFIED || selectedMember.kyc?.status === KYC_STATUS.VERIFIED ? '✓ Verified' : 'Pending' },
+                { label: 'Time Balance', value: formatMinutes(selectedMember.time_balance ?? selectedMember.timeBalance ?? 0) },
+                { label: 'Member Since', value: selectedMember.member_since || selectedMember.memberSince || selectedMember.created_at?.slice(0, 7) || '2026-08' },
                 ...(selectedMember.volunteerStats ? [
                   { label: 'Tasks Done', value: selectedMember.volunteerStats.tasksCompleted },
                   { label: 'People Helped', value: selectedMember.volunteerStats.peopleHelped },

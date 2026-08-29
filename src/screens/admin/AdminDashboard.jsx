@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
-import { REQUEST_STATUS, ROLES } from '../../data/mockData';
+import { REQUEST_STATUS, ROLES } from '../../constants';
 export default function AdminDashboard() {
   const { currentUser, pendingApprovals, members, requests } = useApp();
   const navigate = useNavigate();
@@ -18,7 +18,11 @@ export default function AdminDashboard() {
             <h2 style={{ color: 'white', fontWeight: 800, marginBottom: 4 }}>
               {currentUser?.name?.split(' ')[0]}
             </h2>
-            <p style={{ opacity: 0.8, fontSize: 'var(--font-size-sm)' }}>Managing Pincode 400001 · Colaba</p>
+            <p style={{ opacity: 0.8, fontSize: 'var(--font-size-sm)' }}>
+              {currentUser?.pincode
+                ? `Managing Pincode ${currentUser.pincode}${currentUser.area ? ` · ${currentUser.area}` : ''}`
+                : 'Pincode Administrator'}
+            </p>
           </div>
           <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: '50%', width: 60, height: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem' }}>
           </div>
