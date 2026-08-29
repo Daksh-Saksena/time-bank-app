@@ -63,9 +63,16 @@ export default function RequestCard({ request, onAccept, showDistance, distance,
         </div>
       </div>
       {!compact && (
-        <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)', marginBottom: 'var(--space-3)' }}>
-          {request.description}
-        </p>
+        <div style={{ marginBottom: 'var(--space-3)' }}>
+          <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)', marginBottom: (request.audioUrl || request.audio_url) ? 'var(--space-2)' : 0 }}>
+            {request.description}
+          </p>
+          {(request.audioUrl || request.audio_url) && (
+            <div style={{ marginTop: 'var(--space-2)', background: 'var(--color-surface-alt)', padding: '6px 10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
+              <audio src={request.audioUrl || request.audio_url} controls style={{ width: '100%', height: 30 }} />
+            </div>
+          )}
+        </div>
       )}
       <div className="flex items-center justify-between">
         <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>

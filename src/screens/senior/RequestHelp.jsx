@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { SERVICE_TYPES, SERVICE_LABELS, SERVICE_ICONS, URGENCY } from '../../constants';
-import { Mic, MicOff, Check, ArrowLeft } from 'lucide-react';
+import { Mic, MicOff, Check, ArrowLeft, Play, Square, Volume2 } from 'lucide-react';
 
 export default function RequestHelp() {
   const { createRequest, currentUser, seniorMode } = useApp();
@@ -19,137 +19,163 @@ export default function RequestHelp() {
     urgency: URGENCY.NORMAL,
     pincode: currentUser?.pincode || '',
     location: currentUser?.area || '',
+    audioUrl: null,
   });
 
   const [submitted, setSubmitted] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [audioBlobUrl, setAudioBlobUrl] = useState(null);
   const [voiceError, setVoiceError] = useState('');
+
   const recognitionRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const timerRef = useRef(null);
+  const hasTranscribedRef = useRef(false);
 
   useEffect(() => {
     if (startVoice) {
       setTimeout(() => {
-        startListening();
+        startRecording();
       }, 400);
     }
 
     return () => {
-      stopListening();
+      stopRecording();
     };
   }, []);
 
-  async function startListening() {
+  async function startRecording() {
     setVoiceError('');
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    setRecordingSeconds(0);
+    hasTranscribedRef.current = false;
+    audioChunksRef.current = [];
 
-    if (!SpeechRecognition) {
-      setVoiceError('Speech recognition is not supported in this browser. Please type your request.');
+    // Step 1: Initialize MediaStream and MediaRecorder (Works in Opera, Brave, Chrome, Safari, Firefox)
+    let stream = null;
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      try {
+        console.log('%c[Voice Debug] Requesting microphone stream for MediaRecorder...', 'color: #3498db; font-weight: bold');
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        console.log('%c[Voice Debug] Mic stream acquired!', 'color: #2ecc71; font-weight: bold');
+
+        const mediaRecorder = new MediaRecorder(stream);
+        mediaRecorderRef.current = mediaRecorder;
+
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            audioChunksRef.current.push(event.data);
+          }
+        };
+
+        mediaRecorder.onstop = () => {
+          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+          const url = URL.createObjectURL(audioBlob);
+          setAudioBlobUrl(url);
+          console.log('%c[Voice Debug] Audio recording completed:', 'color: #2ecc71; font-weight: bold', url);
+
+          // Convert to Base64 for Supabase persistence
+          const reader = new FileReader();
+          reader.readAsDataURL(audioBlob);
+          reader.onloadend = () => {
+            const base64Audio = reader.result;
+            setForm((prev) => ({
+              ...prev,
+              audioUrl: base64Audio,
+              description: prev.description
+                ? prev.description
+                : `🎙️ Voice Note Recorded (${SERVICE_LABELS[prev.serviceType] || 'Help Request'})`,
+            }));
+          };
+
+          // Stop all audio tracks
+          if (stream) {
+            stream.getTracks().forEach((track) => track.stop());
+          }
+        };
+
+        mediaRecorder.start();
+        setIsListening(true);
+
+        // Start timer
+        timerRef.current = setInterval(() => {
+          setRecordingSeconds((s) => s + 1);
+        }, 1000);
+      } catch (err) {
+        console.warn('%c[Voice Debug] Mic access error:', 'color: #e74c3c; font-weight: bold', err);
+        setVoiceError('Microphone access was denied. Please allow microphone permissions in your browser.');
+        return;
+      }
+    } else {
+      setVoiceError('Audio recording is not supported in this browser. Please type your request.');
       return;
     }
 
-    // Stop any existing instance
-    if (recognitionRef.current) {
+    // Step 2: Try Web Speech API in parallel (For Chrome, Safari, Edge text transcription)
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
       try {
-        recognitionRef.current.abort();
-      } catch (e) {}
-    }
+        const rec = new SpeechRecognition();
+        rec.lang = navigator.language || 'en-IN';
+        rec.continuous = true;
+        rec.interimResults = true;
 
-    // Step 1: Ensure microphone access
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-      try {
-        console.log('%c[Voice Debug] Requesting microphone access...', 'color: #3498db; font-weight: bold');
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        console.log('%c[Voice Debug] Microphone access GRANTED!', 'color: #2ecc71; font-weight: bold');
-        // Stop the probe stream so SpeechRecognition can bind cleanly
-        stream.getTracks().forEach((track) => track.stop());
-      } catch (err) {
-        console.warn('%c[Voice Debug] Mic permission error:', 'color: #e74c3c; font-weight: bold', err);
-        setVoiceError('Microphone access was denied. Please allow microphone permissions in your browser URL bar.');
-        return;
+        rec.onresult = (event) => {
+          let transcript = '';
+          for (let i = 0; i < event.results.length; i++) {
+            transcript += event.results[i][0].transcript;
+          }
+          if (transcript.trim()) {
+            hasTranscribedRef.current = true;
+            console.log('%c[Voice Debug] Realtime transcript:', 'color: #f39c12; font-weight: bold', transcript);
+            setForm((prev) => ({
+              ...prev,
+              description: transcript.trim(),
+            }));
+          }
+        };
+
+        rec.onerror = (e) => {
+          console.warn('[Voice Debug] Speech engine note (MediaRecorder still active):', e.error);
+        };
+
+        recognitionRef.current = rec;
+        rec.start();
+      } catch (e) {
+        console.log('[Voice Debug] Native speech recognition skipped, using universal MediaRecorder');
       }
-    }
-
-    // Step 2: Create fresh instance on-demand
-    try {
-      const rec = new SpeechRecognition();
-      rec.lang = navigator.language || 'en-IN';
-      rec.continuous = true;
-      rec.interimResults = true;
-      rec.maxAlternatives = 1;
-
-      rec.onstart = () => {
-        console.log('%c[Voice Debug] >>> SPEECH RECOGNITION LIVE & LISTENING <<<', 'color: #2ecc71; font-weight: bold');
-        setIsListening(true);
-        setVoiceError('');
-      };
-
-      rec.onaudiostart = () => {
-        console.log('[Voice Debug] Audio capture started');
-      };
-
-      rec.onspeechstart = () => {
-        console.log('[Voice Debug] Speech detected!');
-      };
-
-      rec.onresult = (event) => {
-        let transcript = '';
-        for (let i = 0; i < event.results.length; i++) {
-          transcript += event.results[i][0].transcript;
-        }
-        console.log('%c[Voice Debug] Spoken transcript:', 'color: #f39c12; font-weight: bold', transcript);
-        if (transcript) {
-          setForm((prev) => ({
-            ...prev,
-            description: transcript,
-          }));
-        }
-      };
-
-      rec.onerror = (event) => {
-        console.warn('%c[Voice Debug] Speech Error Event:', 'color: #e74c3c; font-weight: bold', event.error);
-        if (event.error === 'not-allowed') {
-          setVoiceError('Microphone access blocked. Please click the mic icon in your browser address bar and choose "Allow".');
-        } else if (event.error === 'no-speech') {
-          console.log('[Voice Debug] No speech heard yet, keep speaking...');
-        } else if (event.error === 'network') {
-          setVoiceError('Google speech recognition server unreachable. Please type your request.');
-        } else {
-          setVoiceError(`Voice note: ${event.error}`);
-        }
-        setIsListening(false);
-      };
-
-      rec.onend = () => {
-        console.log('%c[Voice Debug] Speech Recognition ended', 'color: #95a5a6; font-weight: bold');
-        setIsListening(false);
-      };
-
-      recognitionRef.current = rec;
-      rec.start();
-      setIsListening(true);
-    } catch (err) {
-      console.error('%c[Voice Debug] Failed to start recognition:', 'color: #e74c3c; font-weight: bold', err);
-      setVoiceError(`Could not start voice: ${err.message || err}`);
-      setIsListening(false);
     }
   }
 
-  function stopListening() {
-    console.log('%c[Voice Debug] Stop listening requested', 'color: #e74c3c; font-weight: bold');
+  function stopRecording() {
+    console.log('%c[Voice Debug] Stopping recording...', 'color: #e74c3c; font-weight: bold');
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      try {
+        mediaRecorderRef.current.stop();
+      } catch (e) {}
+    }
+
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
       } catch (e) {}
       recognitionRef.current = null;
     }
+
     setIsListening(false);
   }
 
   function toggleVoice() {
     if (isListening) {
-      stopListening();
+      stopRecording();
     } else {
-      startListening();
+      startRecording();
     }
   }
 
@@ -158,6 +184,12 @@ export default function RequestHelp() {
     console.log('%c[Request Form Submit]', 'color: #8e44ad; font-weight: bold', form);
     await createRequest(form);
     setSubmitted(true);
+  }
+
+  function formatSecs(secs) {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
   }
 
   if (submitted) {
@@ -277,7 +309,7 @@ export default function RequestHelp() {
           </div>
         </div>
 
-        {/* Description with Voice Input */}
+        {/* Description with Universal Voice / Audio Recorder */}
         <div className="input-group" style={{ marginBottom: 'var(--space-5)' }}>
           <div className="flex justify-between items-center mb-2">
             <label className="input-label">{t('describeNeed', 'Describe your need')}</label>
@@ -301,8 +333,8 @@ export default function RequestHelp() {
                 transition: 'all 0.2s ease',
               }}
             >
-              {isListening ? <MicOff size={16} /> : <Mic size={16} />}
-              <span>{isListening ? t('stopRecording', 'Stop Recording') : t('speakMic', 'Speak / Mic')}</span>
+              {isListening ? <Square size={16} /> : <Mic size={16} />}
+              <span>{isListening ? `Stop (${formatSecs(recordingSeconds)})` : 'Speak / Record'}</span>
             </button>
           </div>
 
@@ -324,10 +356,31 @@ export default function RequestHelp() {
                 fontSize: 'var(--font-size-sm)',
                 fontWeight: 600,
                 marginTop: 'var(--space-2)',
+                background: 'rgba(231, 76, 60, 0.1)',
+                padding: '8px 12px',
+                borderRadius: 'var(--radius-md)',
               }}
             >
-              <span style={{ animation: 'pulse 1s infinite', display: 'inline-block' }}>●</span>
-              {t('recordingVoice', 'Recording your voice… speak clearly')}
+              <span style={{ animation: 'pulse 1s infinite', display: 'inline-block', color: '#E74C3C' }}>●</span>
+              <span>Recording your voice ({formatSecs(recordingSeconds)}) — speak now!</span>
+            </div>
+          )}
+
+          {audioBlobUrl && !isListening && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 'var(--space-3)',
+                marginTop: 'var(--space-2)',
+                background: 'var(--color-surface-alt)',
+                padding: '8px 12px',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--color-border)',
+              }}
+            >
+              <Volume2 size={18} color="var(--color-primary)" />
+              <audio src={audioBlobUrl} controls style={{ height: 32, flex: 1 }} />
             </div>
           )}
 
