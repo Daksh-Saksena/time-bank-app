@@ -65,13 +65,15 @@ export function AppProvider({ children }) {
   // Fetch all requests
   const fetchRequests = useCallback(async () => {
     try {
+      console.log('%c[Supabase Query] Fetching all requests from database...', 'color: #2ecc71; font-weight: bold');
       const { data, error } = await supabase
         .from('requests')
         .select('*')
         .order('created_at', { ascending: false });
       if (error) {
-        console.error('Error fetching requests:', error);
+        console.error('%c[Supabase Query Error] fetchRequests error:', 'color: #e74c3c; font-weight: bold', error);
       } else if (data) {
+        console.log('%c[Supabase Query Success] Fetched requests count:', 'color: #2ecc71; font-weight: bold', data.length, data);
         // Map database snake_case to camelCase for component compatibility
         const mapped = data.map((r) => ({
           id: r.id,
@@ -93,7 +95,7 @@ export function AppProvider({ children }) {
         setRequests(mapped);
       }
     } catch (err) {
-      console.error('Error in fetchRequests:', err);
+      console.error('%c[Supabase Query Exception] fetchRequests:', 'color: #e74c3c; font-weight: bold', err);
     }
   }, []);
 
@@ -236,6 +238,7 @@ export function AppProvider({ children }) {
   }, [seniorMode, currentUser]);
 
   const createRequest = useCallback(async (requestData) => {
+    console.log('%c[createRequest] Creating request with data:', 'color: #e67e22; font-weight: bold', requestData);
     const isUuid = (id) =>
       typeof id === 'string' &&
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
@@ -252,6 +255,7 @@ export function AppProvider({ children }) {
       urgency: requestData.urgency || 'normal',
       status: REQUEST_STATUS.OPEN,
     };
+    console.log('%c[createRequest] Sending insert payload to Supabase:', 'color: #e67e22; font-weight: bold', newReqPayload);
 
     let inserted = null;
     try {
@@ -262,12 +266,13 @@ export function AppProvider({ children }) {
         .single();
 
       if (error) {
-        console.warn('Supabase insert notice:', error);
+        console.error('%c[createRequest Supabase Error]:', 'color: #e74c3c; font-weight: bold', error);
       } else {
+        console.log('%c[createRequest Supabase Insert Success]:', 'color: #2ecc71; font-weight: bold', data);
         inserted = data;
       }
     } catch (e) {
-      console.warn('Supabase request network notice:', e);
+      console.error('%c[createRequest Network Exception]:', 'color: #e74c3c; font-weight: bold', e);
     }
 
     const formatted = {
@@ -283,6 +288,7 @@ export function AppProvider({ children }) {
       createdAt: inserted?.created_at || new Date().toISOString(),
     };
 
+    console.log('%c[createRequest Formatted Object in Context]:', 'color: #3498db; font-weight: bold', formatted);
     setRequests((prev) => [formatted, ...prev]);
     return formatted;
   }, [currentUser]);

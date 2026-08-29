@@ -29,6 +29,7 @@ export default function RequestHelp() {
 
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    console.log('%c[Voice Debug] SpeechRecognition API available:', 'color: #3498db; font-weight: bold', !!SpeechRecognition);
 
     if (SpeechRecognition) {
       const rec = new SpeechRecognition();
@@ -37,6 +38,7 @@ export default function RequestHelp() {
       rec.interimResults = true;
 
       rec.onstart = () => {
+        console.log('%c[Voice Debug] Speech recognition STARTED listening', 'color: #2ecc71; font-weight: bold');
         setIsListening(true);
         isListeningRef.current = true;
         setVoiceError('');
@@ -47,6 +49,7 @@ export default function RequestHelp() {
         for (let i = 0; i < event.results.length; i++) {
           transcript += event.results[i][0].transcript;
         }
+        console.log('%c[Voice Debug] Speech recognition RESULT:', 'color: #f39c12; font-weight: bold', transcript);
         if (transcript.trim()) {
           setForm((prev) => ({
             ...prev,
@@ -56,13 +59,13 @@ export default function RequestHelp() {
       };
 
       rec.onerror = (event) => {
-        console.warn('Speech recognition error:', event.error);
+        console.warn('%c[Voice Debug] Speech recognition ERROR:', 'color: #e74c3c; font-weight: bold', event.error, event);
         if (event.error === 'not-allowed') {
           setVoiceError('Microphone access blocked. Please allow microphone permissions in your browser.');
           setIsListening(false);
           isListeningRef.current = false;
         } else if (event.error === 'no-speech') {
-          // Keep listening or allow user to speak
+          console.log('[Voice Debug] No speech detected yet, continuing...');
         } else if (event.error === 'network') {
           setVoiceError('Speech recognition service unreachable. You can type your request directly.');
           setIsListening(false);
@@ -73,11 +76,13 @@ export default function RequestHelp() {
       };
 
       rec.onend = () => {
-        // If user is still recording, auto restart
+        console.log('%c[Voice Debug] Speech recognition ENDED', 'color: #95a5a6; font-weight: bold', { isListening: isListeningRef.current });
         if (isListeningRef.current) {
           try {
+            console.log('[Voice Debug] Restarting recognition stream...');
             rec.start();
           } catch (e) {
+            console.warn('[Voice Debug] Restart failed:', e);
             setIsListening(false);
             isListeningRef.current = false;
           }
@@ -87,9 +92,12 @@ export default function RequestHelp() {
       };
 
       recognitionRef.current = rec;
+    } else {
+      setVoiceError('Voice speech recognition is not supported in this browser. Please type your request.');
     }
 
     if (startVoice) {
+      console.log('[Voice Debug] startVoice query param detected, attempting auto-start...');
       setTimeout(() => {
         startListeningSession();
       }, 500);
@@ -107,6 +115,7 @@ export default function RequestHelp() {
 
   function startListeningSession() {
     setVoiceError('');
+    console.log('%c[Voice Debug] startListeningSession called', 'color: #3498db; font-weight: bold');
     if (!recognitionRef.current) {
       setVoiceError('Voice recognition is not supported in this browser. Please type your request.');
       return;
@@ -116,8 +125,9 @@ export default function RequestHelp() {
       isListeningRef.current = true;
       recognitionRef.current.start();
       setIsListening(true);
+      console.log('[Voice Debug] rec.start() executed successfully');
     } catch (err) {
-      console.warn('Speech recognition start note:', err);
+      console.warn('[Voice Debug] rec.start() throw exception:', err);
       try {
         recognitionRef.current.stop();
         setTimeout(() => {
@@ -131,6 +141,7 @@ export default function RequestHelp() {
   }
 
   function stopListeningSession() {
+    console.log('%c[Voice Debug] stopListeningSession called', 'color: #e74c3c; font-weight: bold');
     isListeningRef.current = false;
     if (recognitionRef.current) {
       try {
@@ -148,9 +159,10 @@ export default function RequestHelp() {
     }
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
-    createRequest(form);
+    console.log('%c[Request Form Submit]', 'color: #8e44ad; font-weight: bold', form);
+    await createRequest(form);
     setSubmitted(true);
   }
 
