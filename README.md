@@ -1,12 +1,12 @@
-# ⏰ Time Bank App
+#  Time Bank App
 
 A modern cross-platform application built with web technologies and native mobile support.
 
-**🌐 Live Demo:** [https://time-bank-app.vercel.app](https://time-bank-app.vercel.app)
+** Live Demo:** [https://time-bank-app.vercel.app](https://time-bank-app.vercel.app)
 
 ---
 
-## 🚀 Quick Start
+##  Quick Start
 
 ### Prerequisites
 - Node.js and npm installed on your machine
@@ -15,12 +15,12 @@ A modern cross-platform application built with web technologies and native mobil
 
 ### Installation & Development
 
-#### 1️⃣ Install Dependencies
+#### 1️ Install Dependencies
 ```bash
 npm install
 ```
 
-#### 2️⃣ Start Local Development Server
+#### 2️ Start Local Development Server
 ```bash
 npm run dev
 ```
@@ -29,20 +29,20 @@ npm run dev
 - **Desktop/Laptop:** [http://localhost:5173](http://localhost:5173)
 - **Mobile Device (same network):** `http://<YOUR_LOCAL_IP>:5173`
   
-> 💡 **Tip:** Find your local IP by running `ipconfig getifaddr en0` (macOS) or `ipconfig` (Windows)
+>  **Tip:** Find your local IP by running `ipconfig getifaddr en0` (macOS) or `ipconfig` (Windows)
 
 ---
 
-## 📱 Native Development
+##  Native Development
 
 ### Opening Native Projects
 
-#### 🍎 iOS (Xcode)
+####  iOS (Xcode)
 ```bash
 npx cap open ios
 ```
 
-#### 🤖 Android (Android Studio)
+####  Android (Android Studio)
 ```bash
 npx cap open android
 ```
@@ -56,11 +56,11 @@ npm run build
 npx cap sync
 ```
 
-> ⚠️ **Remember:** Always rebuild and sync after modifying web code to see changes in native apps.
+>  **Remember:** Always rebuild and sync after modifying web code to see changes in native apps.
 
 ---
 
-## 📂 Project Structure
+##  Project Structure
 
 ```
 ├── src/              # Web application source code
@@ -85,23 +85,23 @@ npx cap sync
 
 ---
 
-## 🌐 Deployment
+##  Deployment
 
 The app is automatically deployed to:
 - **Web:** [https://time-bank-app.vercel.app](https://time-bank-app.vercel.app)
 
 ---
 
-## 💡 Tips & Tricks
+##  Tips & Tricks
 
-- 📲 Test on your actual phone by accessing `http://<YOUR_LOCAL_IP>:5173`
-- 🔄 Use hot module replacement (HMR) for faster development
-- 📦 Make sure to run `npm run build` before syncing to native apps
-- 🐛 Check browser console for debugging web issues
+-  Test on your actual phone by accessing `http://<YOUR_LOCAL_IP>:5173`
+-  Use hot module replacement (HMR) for faster development
+-  Make sure to run `npm run build` before syncing to native apps
+-  Check browser console for debugging web issues
 
 ---
 
-## 📚 Documentation
+##  Documentation
 
 For more information about the tech stack:
 - [Capacitor Docs](https://capacitorjs.com/docs)
@@ -111,16 +111,16 @@ For more information about the tech stack:
 
 ---
 
-## ✨ Contributing
+##  Contributing
 
 Feel free to submit issues and enhancement requests!
 
 ---
 
-## 📄 License
+##  License
 
 This project is open source and available under the MIT License.
 
 ---
 
-**Happy coding! 🎉**
+
