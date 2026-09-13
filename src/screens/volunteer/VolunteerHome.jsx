@@ -4,7 +4,7 @@ import { useApp } from '../../context/AppContext';
 import { formatMinutes, REQUEST_STATUS, SERVICE_ICONS, SERVICE_LABELS } from '../../constants';
 
 export default function VolunteerHome() {
-  const { currentUser, getOpenRequests, getVolunteerActiveRequest, acceptRequest, fetchRequests } = useApp();
+  const { currentUser, getOpenRequests, getVolunteerActiveRequest, acceptRequest, fetchRequests, updateVolunteerStatus } = useApp();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -13,6 +13,8 @@ export default function VolunteerHome() {
   const openRequests = getOpenRequests();
   const activeRequest = getVolunteerActiveRequest();
   const stats = currentUser?.volunteerStats || {};
+  const currentStatus = currentUser?.volunteer_status || 'available';
+
   return (
     <div className="page-content">
       <div className="hero-banner">
@@ -32,6 +34,50 @@ export default function VolunteerHome() {
           </div>
         </div>
       </div>
+
+      {/* Quick Status Bar */}
+      <div style={{ padding: 'var(--space-3) var(--space-5) 0' }}>
+        <div style={{
+          background: 'var(--color-surface)',
+          borderRadius: 'var(--radius-lg)',
+          padding: '10px 14px',
+          boxShadow: 'var(--shadow-sm)',
+          border: '1px solid var(--color-border)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}>
+          <span style={{ fontSize: 'var(--font-size-xs)', fontWeight: 600, color: 'var(--color-text-secondary)' }}>
+            Status:
+          </span>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {[
+              { id: 'available', label: '🟢 Ready', color: '#27AE60', bg: '#E8F8F0' },
+              { id: 'busy', label: '🟡 Busy', color: '#D68910', bg: '#FEF9E7' },
+              { id: 'dnd', label: '🔴 DND', color: '#C0392B', bg: '#FDEDEC' },
+            ].map(s => (
+              <button
+                key={s.id}
+                onClick={() => updateVolunteerStatus(s.id)}
+                style={{
+                  border: currentStatus === s.id ? `2px solid ${s.color}` : '1px solid var(--color-border)',
+                  background: currentStatus === s.id ? s.bg : 'transparent',
+                  color: currentStatus === s.id ? s.color : 'var(--color-text-muted)',
+                  fontWeight: currentStatus === s.id ? 700 : 500,
+                  fontSize: 'var(--font-size-xs)',
+                  padding: '5px 10px',
+                  borderRadius: 20,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {activeRequest ? (
         <div style={{ margin: 'var(--space-4) var(--space-5) 0' }}>
           <div style={{ background: '#FEF5E7', border: '2px solid #F39C12', borderRadius: 'var(--radius-lg)', padding: 'var(--space-4)' }}>

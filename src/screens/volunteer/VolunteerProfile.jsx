@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { useLanguage } from '../../context/LanguageContext';
 import StarRating from '../../components/common/StarRating';
-import { formatMinutes, KYC_STATUS } from '../../constants';
-import { supabase } from '../../lib/supabase';
+import SevaSummaryCard from '../../components/common/SevaSummaryCard';
+import { formatMinutes, KYC_STATUS, VOLUNTEER_STATUS, isDND } from '../../constants';
 import {
   Bell,
   History,
@@ -13,14 +13,16 @@ import {
   Power,
   ChevronRight,
   Globe,
+  Heart,
+  Trophy,
 } from 'lucide-react';
 
 export default function VolunteerProfile() {
-  const { currentUser, logout, getUserRatings } = useApp();
+  const { currentUser, logout, getUserRatings, updateVolunteerStatus, requests } = useApp();
   const { t, currentLang, languages, setLangModalOpen } = useLanguage();
   const navigate = useNavigate();
   const ratings = getUserRatings();
-  const [available, setAvailable] = useState(currentUser?.is_available ?? true);
+  const [volunteerStatus, setVolunteerStatus] = useState(currentUser?.volunteer_status || VOLUNTEER_STATUS.AVAILABLE);
   const [toastMessage, setToastMessage] = useState('');
 
   function showToast(msg) {
@@ -28,21 +30,15 @@ export default function VolunteerProfile() {
     setTimeout(() => setToastMessage(''), 3000);
   }
 
-  async function handleToggleAvailability() {
-    const next = !available;
-    setAvailable(next);
-    showToast(next ? 'You are now marked Available for requests' : 'You are now marked Offline');
-
-    if (currentUser?.id) {
-      try {
-        await supabase
-          .from('profiles')
-          .update({ is_available: next })
-          .eq('id', currentUser.id);
-      } catch (err) {
-        console.error('Error updating availability:', err);
-      }
-    }
+  async function handleStatusChange(newStatus) {
+    setVolunteerStatus(newStatus);
+    await updateVolunteerStatus(newStatus);
+    const labels = {
+      [VOLUNTEER_STATUS.AVAILABLE]: '✅ You are now Available for requests',
+      [VOLUNTEER_STATUS.BUSY]: '🔴 You are now Busy — won\'t receive new requests',
+      [VOLUNTEER_STATUS.DND]: '🌙 Do Not Disturb — notifications paused',
+    };
+    showToast(labels[newStatus] || 'Status updated');
   }
 
   async function handleNotificationClick() {
@@ -153,47 +149,41 @@ export default function VolunteerProfile() {
           </div>
         </div>
 
+        {/* Monthly Seva Summary Card with PDF Export */}
+        <SevaSummaryCard user={currentUser} requests={requests} />
+
         <div className="card" style={{ marginBottom: 'var(--space-4)' }}>
           <h4 style={{ marginBottom: 'var(--space-4)' }}>Settings & Options</h4>
 
-          {/* Availability Toggle */}
-          <div className="flex justify-between items-center" style={{ marginBottom: 'var(--space-4)' }}>
-            <div>
-              <div style={{ fontWeight: 600 }}>Availability</div>
-              <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
-                {available ? 'Currently available for new tasks' : 'Currently marked as away / offline'}
-              </div>
+          {/* Volunteer Status — 3-state */}
+          <div style={{ marginBottom: 'var(--space-4)' }}>
+            <div style={{ fontWeight: 600, marginBottom: 8 }}>My Status</div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {[
+                { status: VOLUNTEER_STATUS.AVAILABLE, label: '✅ Available', color: 'var(--color-success)', bg: 'var(--color-success-bg)' },
+                { status: VOLUNTEER_STATUS.BUSY, label: '🔴 Busy', color: 'var(--color-danger)', bg: 'var(--color-danger-bg)' },
+                { status: VOLUNTEER_STATUS.DND, label: '🌙 DND', color: '#6C3483', bg: '#E8DAEF' },
+              ].map(({ status, label, color, bg }) => (
+                <button
+                  key={status}
+                  onClick={() => handleStatusChange(status)}
+                  style={{
+                    flex: 1, padding: '8px 4px', borderRadius: 'var(--radius-md)',
+                    border: `2px solid ${volunteerStatus === status ? color : 'var(--color-border)'}`,
+                    background: volunteerStatus === status ? bg : 'white',
+                    color: volunteerStatus === status ? color : 'var(--color-text-muted)',
+                    fontWeight: volunteerStatus === status ? 700 : 500,
+                    fontSize: 'var(--font-size-xs)', cursor: 'pointer', fontFamily: 'var(--font-family)',
+                    transition: 'all 0.15s',
+                  }}
+                >{label}</button>
+              ))}
             </div>
-            <button
-              onClick={handleToggleAvailability}
-              style={{
-                width: 52,
-                height: 28,
-                borderRadius: 14,
-                background: available ? 'var(--color-success)' : 'var(--color-border)',
-                border: 'none',
-                cursor: 'pointer',
-                position: 'relative',
-                transition: 'background 0.2s ease',
-              }}
-              aria-label="Toggle availability"
-              role="switch"
-              aria-checked={available}
-            >
-              <span
-                style={{
-                  position: 'absolute',
-                  top: 3,
-                  left: available ? 27 : 3,
-                  width: 22,
-                  height: 22,
-                  borderRadius: '50%',
-                  background: 'white',
-                  transition: 'left 0.2s ease',
-                  boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
-                }}
-              />
-            </button>
+            <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', marginTop: 6 }}>
+              {volunteerStatus === VOLUNTEER_STATUS.DND ? '🌙 No notifications between 10 PM–6 AM' :
+               volunteerStatus === VOLUNTEER_STATUS.BUSY ? '🔴 Not accepting new requests' :
+               '✅ Ready to receive new seva requests'}
+            </div>
           </div>
 
           <div className="divider" style={{ margin: 'var(--space-3) 0' }} />

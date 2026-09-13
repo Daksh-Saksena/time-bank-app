@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { formatMinutes, SERVICE_ICONS, SERVICE_LABELS, REQUEST_STATUS } from '../../constants';
 import Modal from '../../components/common/Modal';
+import VideoCallModal from '../../components/common/VideoCallModal';
+import { Video } from 'lucide-react';
 function PinEntry({ expectedPin, onSuccess, onCancel, title }) {
   const [pin, setPin] = useState(['', '', '', '']);
   const [error, setError] = useState('');
@@ -114,6 +116,7 @@ export default function ActiveTask() {
   const [pendingAction, setPendingAction] = useState(null);
   const [pickRequestModal, setPickRequestModal] = useState(false);
   const [acceptedRequest, setAcceptedRequest] = useState(null);
+  const [videoCallOpen, setVideoCallOpen] = useState(false);
   const acceptedPending = requests.find(
     (r) => r.assignedVolunteerId === currentUser?.id && r.status === REQUEST_STATUS.ACCEPTED
   );
@@ -207,11 +210,24 @@ export default function ActiveTask() {
             <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', textAlign: 'center' }}>
               Task completed? End session to credit your time.
             </p>
+            <button
+              className="btn btn-outline btn-full"
+              onClick={() => setVideoCallOpen(true)}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+            >
+              <Video size={18} /> 📹 Video Help
+            </button>
             <button className="btn btn-danger btn-full btn-lg" onClick={initiateEnd}>
               ■ End Session & Claim Time
             </button>
           </div>
         )}
+        <VideoCallModal
+          isOpen={videoCallOpen}
+          onClose={() => setVideoCallOpen(false)}
+          requestId={req?.id}
+          title={`Video Help — ${req?.seniorName}`}
+        />
         {/* Verification method modal */}
         <Modal isOpen={verifyModal === 'verify'} onClose={() => setVerifyModal(null)} title="Choose Verification Method">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>

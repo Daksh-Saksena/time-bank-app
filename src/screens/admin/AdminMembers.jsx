@@ -81,7 +81,7 @@ export default function AdminMembers() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', marginBottom: 'var(--space-5)' }}>
               {[
                 { label: 'Phone', value: selectedMember.phone || '-' },
-                { label: 'Age', value: selectedMember.age || '-' },
+                { label: 'DOB', value: selectedMember.dob ? new Date(selectedMember.dob).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : selectedMember.age ? `Age: ${selectedMember.age}` : '-' },
                 { label: 'Area', value: `${selectedMember.area || 'Mumbai'} · ${selectedMember.pincode || '400001'}` },
                 { label: 'KYC', value: selectedMember.kyc_status === KYC_STATUS.VERIFIED || selectedMember.kyc?.status === KYC_STATUS.VERIFIED ? '✓ Verified' : 'Pending' },
                 { label: 'Time Balance', value: formatMinutes(selectedMember.time_balance ?? selectedMember.timeBalance ?? 0) },

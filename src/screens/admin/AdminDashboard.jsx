@@ -2,13 +2,35 @@ import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { REQUEST_STATUS, ROLES } from '../../constants';
 export default function AdminDashboard() {
-  const { currentUser, pendingApprovals, members, requests } = useApp();
+  const { currentUser, pendingApprovals, members, requests, getPincodeAdminRequests } = useApp();
   const navigate = useNavigate();
   const openCount = requests.filter((r) => r.status === REQUEST_STATUS.OPEN).length;
   const inProgressCount = requests.filter((r) => r.status === REQUEST_STATUS.IN_PROGRESS).length;
-  const completedCount = requests.filter((r) => r.status === REQUEST_STATUS.COMPLETED).length;
+  const completedCount = requests.filter((r) => [REQUEST_STATUS.COMPLETED, REQUEST_STATUS.RATED, REQUEST_STATUS.CLOSED].includes(r.status)).length;
   const seniorCount = members.filter((m) => m.role === ROLES.SENIOR).length;
   const volunteerCount = members.filter((m) => m.role === ROLES.VOLUNTEER).length;
+  const pincodeAdminPending = getPincodeAdminRequests();
+
+  const isAdmin =
+    currentUser?.role === ROLES.ADMIN ||
+    currentUser?.is_super_admin === true ||
+    (currentUser?.roles || []).includes(ROLES.ADMIN);
+
+  if (!isAdmin) {
+    return (
+      <div className="page-content" style={{ padding: 'var(--space-6)', textAlign: 'center', minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ fontSize: '3rem', marginBottom: 16 }}>🔒</div>
+        <h3 style={{ marginBottom: 8 }}>Access Restricted</h3>
+        <p style={{ color: 'var(--color-text-muted)', marginBottom: 24, maxWidth: 320 }}>
+          You do not have administrative privileges to view this dashboard.
+        </p>
+        <button className="btn btn-primary" onClick={() => navigate('/')}>
+          Back to Home
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="page-content">
       <div className="hero-banner">
@@ -83,10 +105,12 @@ export default function AdminDashboard() {
         <h3 style={{ marginBottom: 'var(--space-4)' }}>Quick Actions</h3>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
           {[
-            { label: 'Review Approvals', icon: '', path: '/admin/approvals' },
-            { label: 'View Members', icon: '', path: '/admin/members' },
-            { label: 'All Requests', icon: '', path: '/admin/requests' },
-            { label: 'Activity Log', icon: '', path: '/admin/profile' },
+            { label: 'Review Approvals', icon: '✅', path: '/admin/approvals' },
+            { label: 'View Members', icon: '👥', path: '/admin/members' },
+            { label: 'All Requests', icon: '📋', path: '/admin/requests' },
+            { label: 'Create Request', icon: '🛡️', path: '/admin/create-request' },
+            { label: 'Reports', icon: '📊', path: '/admin/reports' },
+            { label: 'Seva Wall', icon: '🏆', path: '/leaderboard' },
           ].map(({ label, icon, path }) => (
             <button
               key={label}
@@ -99,6 +123,29 @@ export default function AdminDashboard() {
             </button>
           ))}
         </div>
+
+        {/* Pincode Admin Registrations Report */}
+        {pincodeAdminPending.length > 0 && (
+          <div style={{ marginTop: 'var(--space-5)' }}>
+            <h3 style={{ marginBottom: 'var(--space-3)', color: 'var(--color-accent)' }}>🛡️ Pincode Admin Requests ({pincodeAdminPending.length})</h3>
+            <div className="alert alert-warning" style={{ marginBottom: 'var(--space-3)' }}>
+              These users selected "Pincode Admin" role and are awaiting your approval.
+            </div>
+            {pincodeAdminPending.map((m) => (
+              <div key={m.id} className="card" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 'var(--space-2)' }}>
+                <div className="avatar" style={{ background: '#8E44AD', color: 'white', fontWeight: 700 }}>{m.name?.[0] || 'A'}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 700 }}>{m.name}</div>
+                  <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>{m.area} · {m.phone}</div>
+                </div>
+                <button
+                  onClick={() => navigate('/admin/approvals')}
+                  style={{ background: 'var(--color-primary)', color: 'white', border: 'none', borderRadius: 'var(--radius-md)', padding: '6px 12px', cursor: 'pointer', fontFamily: 'var(--font-family)', fontWeight: 600, fontSize: 'var(--font-size-xs)' }}
+                >Review</button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

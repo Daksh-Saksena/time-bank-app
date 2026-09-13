@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { supabase } from '../../lib/supabase';
+import Modal from '../../components/common/Modal';
+import RoleSwitcherModal from '../../components/common/RoleSwitcherModal';
 
 export default function LoginScreen() {
   const { login, refreshProfile } = useApp();
@@ -83,12 +85,16 @@ export default function LoginScreen() {
 
         if (profile) {
           login(profile);
+          const roles = profile.roles || [profile.role];
           const routeMap = {
             senior: '/senior/home',
             volunteer: '/volunteer/home',
             admin: '/admin/dashboard',
+            super_admin: '/admin/dashboard',
           };
-          navigate(routeMap[profile.role] || '/');
+          // If multi-role, navigate to active role's home
+          const activeRole = profile.active_role || profile.role || 'senior';
+          navigate(routeMap[activeRole] || '/');
         } else {
           // If user exists in auth but has no profile yet, send to onboarding
           navigate('/onboarding');
@@ -119,18 +125,24 @@ export default function LoginScreen() {
         {step === 'phone' ? (
           <form onSubmit={handleSendOtp}>
             <div className="input-group" style={{ marginBottom: 'var(--space-5)' }}>
-              <label className="input-label">Phone Number</label>
+              <label className="input-label">Mobile Number</label>
               <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
                 <span className="input" style={{ width: 64, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-muted)', fontWeight: 600 }}>+91</span>
                 <input
                   type="tel"
+                  inputMode="numeric"
                   className="input"
-                  placeholder="98765 43210"
+                  placeholder="10-digit mobile number"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                  maxLength={10}
                   autoFocus
+                  autoComplete="tel"
                 />
               </div>
+              {phone && phone.replace(/\D/g, '').length !== 10 && phone.length > 0 && (
+                <p style={{ color: 'var(--color-danger)', fontSize: 'var(--font-size-xs)', marginTop: 4 }}>Must be exactly 10 digits</p>
+              )}
             </div>
             {error && <p style={{ color: 'var(--color-danger)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-3)' }}>{error}</p>}
             {info && <p style={{ color: 'var(--color-primary)', fontSize: 'var(--font-size-xs)', marginBottom: 'var(--space-3)', background: 'var(--color-surface-alt)', padding: 'var(--space-2) var(--space-3)', borderRadius: 'var(--radius-sm)' }}>{info}</p>}

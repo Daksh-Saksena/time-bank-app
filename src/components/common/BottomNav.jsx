@@ -14,6 +14,9 @@ import {
   CheckSquare,
   ClipboardList,
   Users,
+  Trophy,
+  FileBarChart,
+  Heart,
 } from 'lucide-react';
 
 export default function BottomNav() {
@@ -29,15 +32,15 @@ export default function BottomNav() {
       { path: '/senior/home', icon: <Home size={iconSize} />, labelKey: 'home', label: 'Home' },
       { path: '/senior/request', icon: <PlusCircle size={iconSize} />, labelKey: 'request', label: 'Request' },
       { path: '/senior/nearby', icon: <MapPin size={iconSize} />, labelKey: 'nearby', label: 'Nearby' },
-      { path: '/senior/ledger', icon: <Clock size={iconSize} />, labelKey: 'time', label: 'Time' },
+      { path: '/senior/trusted-circle', icon: <Heart size={iconSize} />, labelKey: 'circle', label: 'Circle' },
       { path: '/senior/profile', icon: <User size={iconSize} />, labelKey: 'profile', label: 'Profile' },
     ],
     [ROLES.VOLUNTEER]: [
       { path: '/volunteer/home', icon: <Home size={iconSize} />, labelKey: 'home', label: 'Home' },
       { path: '/volunteer/nearby', icon: <MapPin size={iconSize} />, labelKey: 'requests', label: 'Requests' },
       { path: '/volunteer/task', icon: <Zap size={iconSize} />, labelKey: 'active', label: 'Active' },
-      { path: '/volunteer/ledger', icon: <Clock size={iconSize} />, labelKey: 'time', label: 'Time' },
       { path: '/volunteer/impact', icon: <BarChart3 size={iconSize} />, labelKey: 'impact', label: 'Impact' },
+      { path: '/leaderboard', icon: <Trophy size={iconSize} />, labelKey: 'leaderboard', label: 'Seva Wall' },
       { path: '/volunteer/profile', icon: <User size={iconSize} />, labelKey: 'profile', label: 'Profile' },
     ],
     [ROLES.ADMIN]: [
@@ -45,6 +48,15 @@ export default function BottomNav() {
       { path: '/admin/approvals', icon: <CheckSquare size={iconSize} />, labelKey: 'approvals', label: 'Approvals' },
       { path: '/admin/requests', icon: <ClipboardList size={iconSize} />, labelKey: 'requests', label: 'Requests' },
       { path: '/admin/members', icon: <Users size={iconSize} />, labelKey: 'members', label: 'Members' },
+      { path: '/admin/reports', icon: <FileBarChart size={iconSize} />, labelKey: 'reports', label: 'Reports' },
+      { path: '/admin/profile', icon: <User size={iconSize} />, labelKey: 'profile', label: 'Profile' },
+    ],
+    [ROLES.SUPER_ADMIN]: [
+      { path: '/admin/dashboard', icon: <LayoutDashboard size={iconSize} />, labelKey: 'dashboard', label: 'Dashboard' },
+      { path: '/admin/approvals', icon: <CheckSquare size={iconSize} />, labelKey: 'approvals', label: 'Approvals' },
+      { path: '/admin/members', icon: <Users size={iconSize} />, labelKey: 'members', label: 'Members' },
+      { path: '/admin/reports', icon: <FileBarChart size={iconSize} />, labelKey: 'reports', label: 'Reports' },
+      { path: '/leaderboard', icon: <Trophy size={iconSize} />, labelKey: 'leaderboard', label: 'Seva Wall' },
       { path: '/admin/profile', icon: <User size={iconSize} />, labelKey: 'profile', label: 'Profile' },
     ],
   };

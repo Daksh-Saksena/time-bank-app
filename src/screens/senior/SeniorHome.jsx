@@ -110,13 +110,32 @@ export default function SeniorHome() {
       </div>
       <div style={{ padding: '0 var(--space-5) var(--space-4)' }}>
         <button
-          className="btn btn-outline btn-full"
+          className="btn btn-primary btn-full"
           onClick={() => navigate('/senior/request?voice=true')}
-          style={{ borderStyle: 'dashed', gap: 'var(--space-3)' }}
+          style={{
+            minHeight: 64,
+            fontSize: 'var(--font-size-lg)',
+            fontWeight: 800,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 12,
+            background: 'linear-gradient(135deg, #E74C3C, #C0392B)',
+            border: 'none',
+            borderRadius: 'var(--radius-xl)',
+            boxShadow: '0 4px 20px rgba(231,76,60,0.4)',
+            position: 'relative',
+            overflow: 'hidden',
+          }}
         >
-          <span>{t('describeByVoice', 'Describe your need by voice')}</span>
+          <span style={{ fontSize: '2rem' }}>🎙️</span>
+          <div style={{ textAlign: 'left' }}>
+            <div>{t('speakRequest', 'बोलकर मदद माँगें')}</div>
+            <div style={{ fontSize: 'var(--font-size-xs)', fontWeight: 400, opacity: 0.85 }}>Tap and speak your need</div>
+          </div>
         </button>
       </div>
+
       <div style={{ padding: '0 var(--space-5)' }}>
         <div className="flex justify-between items-center mb-4">
           <h3>{t('myRequests', 'My Requests')}</h3>

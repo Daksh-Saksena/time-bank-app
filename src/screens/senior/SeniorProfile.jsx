@@ -93,7 +93,8 @@ export default function SeniorProfile() {
               {currentUser?.phone || '+91 XXXXX XXXXX'}
             </div>
             <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
-              {currentUser?.area || 'Colaba, Mumbai'} · Age {currentUser?.age || 70}
+              {currentUser?.area || 'Colaba, Mumbai'}
+              {currentUser?.dob ? ` · DOB: ${new Date(currentUser.dob).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}` : currentUser?.age ? ` · Age ${currentUser.age}` : ''}
             </div>
           </div>
         </div>
@@ -196,6 +197,26 @@ export default function SeniorProfile() {
             >
               <ClipboardList size={18} color="var(--color-text-secondary)" />
               <span>My Requests & Status</span>
+              <ChevronRight size={18} style={{ marginLeft: 'auto', color: 'var(--color-text-muted)' }} />
+            </button>
+
+            <button
+              onClick={() => navigate('/senior/trusted-circle')}
+              className="flex items-center gap-3"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 'var(--space-3) 0', width: '100%', textAlign: 'left', fontFamily: 'var(--font-family)', fontSize: 'var(--font-size-base)', color: 'var(--color-text-primary)' }}
+            >
+              <span style={{ fontSize: 18 }}>🤝</span>
+              <span>My Trusted Circle</span>
+              <ChevronRight size={18} style={{ marginLeft: 'auto', color: 'var(--color-text-muted)' }} />
+            </button>
+
+            <button
+              onClick={() => navigate('/leaderboard')}
+              className="flex items-center gap-3"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 'var(--space-3) 0', width: '100%', textAlign: 'left', fontFamily: 'var(--font-family)', fontSize: 'var(--font-size-base)', color: 'var(--color-text-primary)' }}
+            >
+              <span style={{ fontSize: 18 }}>🏆</span>
+              <span>Seva Wall</span>
               <ChevronRight size={18} style={{ marginLeft: 'auto', color: 'var(--color-text-muted)' }} />
             </button>
 
