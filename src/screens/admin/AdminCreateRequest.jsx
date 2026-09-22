@@ -326,8 +326,8 @@ export default function AdminCreateRequest() {
               <label className="input-label" style={{ fontWeight: 700 }}>5. Urgency</label>
               <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
                 {[
-                  { value: URGENCY.NORMAL, label: '🟢 Normal', desc: 'Flexible timing' },
-                  { value: URGENCY.HIGH, label: '🔴 High Priority', desc: 'Urgent / immediate' },
+                  { value: URGENCY.NORMAL, label: 'Normal', desc: 'Flexible timing' },
+                  { value: URGENCY.HIGH, label: 'High Priority', desc: 'Urgent / immediate' },
                 ].map(({ value, label, desc }) => (
                   <button
                     key={value}
@@ -377,7 +377,7 @@ export default function AdminCreateRequest() {
               disabled={loading || !form.description.trim()}
               style={{ minHeight: 56, fontWeight: 800, fontSize: '1.05rem', borderRadius: 'var(--radius-lg)' }}
             >
-              {loading ? 'Creating Request…' : '🛡️ Create Request on Behalf of Member'}
+              {loading ? 'Creating Request…' : 'Create Request on Behalf of Member'}
             </button>
           </>
         )}

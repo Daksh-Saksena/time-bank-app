@@ -4,7 +4,7 @@ import { useApp } from '../../context/AppContext';
 import { URGENCY, REQUEST_STATUS, SERVICE_LABELS, SERVICE_ICONS, formatMinutes, SERVICE_TYPES } from '../../constants';
 import RequestCard from '../../components/common/RequestCard';
 import Modal from '../../components/common/Modal';
-import { ShieldCheck, UserCheck, AlertCircle, Edit3, XCircle, CheckCircle, Plus } from 'lucide-react';
+import { ShieldCheck, UserCheck, AlertCircle, Edit3, XCircle, CheckCircle, Plus, ClipboardList } from 'lucide-react';
 import { getPincodeLocation } from '../../lib/geo';
 
 const LIFECYCLE_TABS = [
@@ -199,7 +199,7 @@ export default function AdminRequests() {
           style={{ marginLeft: 8, borderColor: '#DC2626', color: filterUrgency === URGENCY.HIGH ? 'white' : '#DC2626', background: filterUrgency === URGENCY.HIGH ? '#DC2626' : 'white' }}
           onClick={() => setFilterUrgency(filterUrgency === URGENCY.HIGH ? 'all' : URGENCY.HIGH)}
         >
-          🚨 Urgent Only
+          Urgent Only
         </button>
       </div>
 
@@ -207,7 +207,9 @@ export default function AdminRequests() {
       <div style={{ padding: '0 var(--space-5)' }}>
         {filtered.length === 0 ? (
           <div className="empty-state">
-            <div className="empty-state-icon">📋</div>
+            <div className="empty-state-icon" style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+              <ClipboardList size={36} color="var(--color-text-muted)" />
+            </div>
             <h3>No requests found</h3>
             <p>No requests match the selected lifecycle stage or filters.</p>
           </div>
@@ -263,7 +265,7 @@ export default function AdminRequests() {
                 <div style={{ background: '#F8FAFC', padding: 12, borderRadius: 8, fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-4)', border: '1px solid var(--color-border)' }}>
                   <p style={{ margin: '0 0 6px' }}><strong>Description:</strong> {selectedReq.description || 'No description provided.'}</p>
                   <p style={{ margin: '0 0 6px' }}><strong>Lifecycle Status:</strong> <span style={{ textTransform: 'capitalize', fontWeight: 700, color: 'var(--color-primary)' }}>{selectedReq.lifecycleStatus || selectedReq.status}</span></p>
-                  <p style={{ margin: '0 0 6px' }}><strong>Urgency:</strong> {selectedReq.urgency === URGENCY.HIGH ? '🔴 High Priority' : '🟢 Normal'}</p>
+                  <p style={{ margin: '0 0 6px' }}><strong>Urgency:</strong> {selectedReq.urgency === URGENCY.HIGH ? 'High Priority' : 'Normal'}</p>
                   <p style={{ margin: '0 0 6px' }}><strong>Assigned Volunteer:</strong> {selectedReq.assignedVolunteerName || selectedReq.assigned_volunteer_name || 'None (Open / Not Assigned)'}</p>
                   <p style={{ margin: '0 0 6px' }}><strong>Schedule:</strong> {selectedReq.scheduledDate || 'Today'} {selectedReq.scheduledTime ? `at ${selectedReq.scheduledTime}` : ''}</p>
                   {selectedReq.duration && <p style={{ margin: 0 }}><strong>Duration:</strong> {formatMinutes(selectedReq.duration)}</p>}
@@ -367,8 +369,8 @@ export default function AdminRequests() {
                       value={editForm.urgency}
                       onChange={(e) => setEditForm((prev) => ({ ...prev, urgency: e.target.value }))}
                     >
-                      <option value={URGENCY.NORMAL}>🟢 Normal</option>
-                      <option value={URGENCY.HIGH}>🔴 High Priority</option>
+                      <option value={URGENCY.NORMAL}>Normal</option>
+                      <option value={URGENCY.HIGH}>High Priority</option>
                     </select>
                   </div>
                 </div>

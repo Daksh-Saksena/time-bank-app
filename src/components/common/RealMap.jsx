@@ -175,7 +175,7 @@ export default function RealMap({ requests = [], onAccept, role = 'volunteer' })
             </div>
             <p style="margin: 0 0 6px; font-size: 11px; color: #4B5563; line-height: 1.4;">${req.description || 'मदद चाहिए'}</p>
             <div style="font-size: 10px; color: #6B7280; margin-bottom: 6px;">
-              📍 ${req.location || 'Local Area'} ${req.pincode ? `(${req.pincode})` : ''}
+              ${req.location || 'Local Area'} ${req.pincode ? `(${req.pincode})` : ''}
             </div>
             ${
               role === 'volunteer' && (req.status === 'open' || req.status === 'notified_trusted')

@@ -27,12 +27,12 @@ export default function VolunteerHome() {
 
   return (
     <div className="page-content" style={{ paddingBottom: 80 }}>
-      {/* Hero Banner — Pure Seva Model (No spendable currency) */}
+      {/* Hero Banner: Pure Seva Model (No spendable currency) */}
       <div className="hero-banner" style={{ background: 'linear-gradient(135deg, #1B4F72 0%, #2E86AB 100%)' }}>
         <div className="flex justify-between items-center">
           <div>
             <p style={{ fontSize: 'var(--font-size-sm)', opacity: 0.85, marginBottom: 4 }}>
-              🙏 सेवा कार्य में स्वागत है,
+              सेवा कार्य में स्वागत है,
             </p>
             <h2 style={{ color: 'white', fontWeight: 800, marginBottom: 'var(--space-3)', fontSize: '1.6rem' }}>
               {currentUser?.name || 'Sevak'}
@@ -67,7 +67,7 @@ export default function VolunteerHome() {
         </div>
       </div>
 
-      {/* Night-time DND Banner (10 PM – 6 AM) */}
+      {/* Night-time DND Banner (10 PM to 6 AM) */}
       {isNightDND && (
         <div
           style={{
@@ -86,7 +86,7 @@ export default function VolunteerHome() {
         >
           <Moon size={18} color="#7E22CE" />
           <span>
-            <strong>रात्रि विश्राम मोड (Night DND Active 10 PM–6 AM):</strong> रात के समय नए अनुरोधों की सूचनाएं मौन रहती हैं ताकि आपकी नींद बाधित न हो।
+            <strong>रात्रि विश्राम मोड (Night DND Active 10 PM to 6 AM):</strong> रात के समय नए अनुरोधों की सूचनाएं मौन रहती हैं ताकि आपकी नींद बाधित न हो।
           </span>
         </div>
       )}
@@ -113,18 +113,18 @@ export default function VolunteerHome() {
             </div>
             <div style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', marginTop: 2 }}>
               {currentStatus === VOLUNTEER_STATUS.AVAILABLE
-                ? '🟢 आप नए अनुरोध स्वीकार कर सकते हैं'
+                ? 'आप नए अनुरोध स्वीकार कर सकते हैं'
                 : currentStatus === VOLUNTEER_STATUS.BUSY
-                ? '🟡 आप अभी व्यस्त हैं'
-                : '🔴 DND: सूचनाएं बंद हैं'}
+                ? 'आप अभी व्यस्त हैं'
+                : 'DND: सूचनाएं बंद हैं'}
             </div>
           </div>
 
           <div style={{ display: 'flex', gap: 6 }}>
             {[
-              { id: VOLUNTEER_STATUS.AVAILABLE, label: '🟢 Ready', color: '#16A34A', bg: '#DCFCE7' },
-              { id: VOLUNTEER_STATUS.BUSY, label: '🟡 Busy', color: '#D97706', bg: '#FEF3C7' },
-              { id: VOLUNTEER_STATUS.DND, label: '🔴 DND', color: '#DC2626', bg: '#FEE2E2' },
+              { id: VOLUNTEER_STATUS.AVAILABLE, label: 'Ready', color: '#16A34A', bg: '#DCFCE7' },
+              { id: VOLUNTEER_STATUS.BUSY, label: 'Busy', color: '#D97706', bg: '#FEF3C7' },
+              { id: VOLUNTEER_STATUS.DND, label: 'DND', color: '#DC2626', bg: '#FEE2E2' },
             ].map((s) => (
               <button
                 key={s.id}
@@ -163,7 +163,7 @@ export default function VolunteerHome() {
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
               <span style={{ fontWeight: 800, fontSize: 'var(--font-size-base)', color: '#92400E', display: 'flex', alignItems: 'center', gap: 6 }}>
-                ⚡ सक्रिय सेवा कार्य (Active Task)
+                सक्रिय सेवा कार्य (Active Task)
               </span>
               <span className="badge badge-status-in-progress" style={{ animation: 'pulse 1.5s infinite' }}>
                 ● On the way / In Progress
@@ -176,7 +176,7 @@ export default function VolunteerHome() {
                   {SERVICE_ICONS[activeRequest.serviceType]} {SERVICE_LABELS[activeRequest.serviceType]}
                 </div>
                 <div style={{ fontSize: 'var(--font-size-xs)', color: '#78350F', marginTop: 2 }}>
-                  वरिष्ठ नागरिक: <strong>{activeRequest.seniorName}</strong> · 📍 {activeRequest.location}
+                  वरिष्ठ नागरिक: <strong>{activeRequest.seniorName}</strong> · स्थान: {activeRequest.location}
                 </div>
               </div>
               <button
@@ -223,7 +223,7 @@ export default function VolunteerHome() {
 
           <div className="stat-card" style={{ background: 'white', borderRadius: 'var(--radius-lg)', padding: '14px', border: '1px solid var(--color-border)' }}>
             <div className="stat-value" style={{ color: '#1B4F72', fontSize: '1.5rem', fontWeight: 800 }}>
-              {metrics.avgRating ? `${metrics.avgRating} ★` : '—'}
+              {metrics.avgRating ? `${metrics.avgRating} ★` : 'N/A'}
             </div>
             <div className="stat-label" style={{ fontSize: '0.78rem', color: 'var(--color-text-secondary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
               <Star size={14} color="#F59E0B" /> {metrics.reviewCount > 0 ? `${metrics.reviewCount} Reviews` : 'New Sevak'}
@@ -283,14 +283,14 @@ export default function VolunteerHome() {
                         {SERVICE_LABELS[req.serviceType] || req.serviceType}
                       </div>
                       <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
-                        द्वारा: <strong>{req.seniorName}</strong> · 📍 {req.location || 'Local Area'}
+                        द्वारा: <strong>{req.seniorName}</strong> · {req.location || 'Local Area'}
                       </div>
                     </div>
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
                     {isHighUrgency ? (
-                      <span className="badge badge-high" style={{ fontSize: '0.75rem' }}>⚡ Urgent</span>
+                      <span className="badge badge-high" style={{ fontSize: '0.75rem' }}>Urgent</span>
                     ) : (
                       <span className="badge badge-normal" style={{ fontSize: '0.75rem' }}>Normal</span>
                     )}

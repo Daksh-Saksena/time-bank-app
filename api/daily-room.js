@@ -1,6 +1,6 @@
 /**
  * Serverless Function (Vercel) for Secure Daily.co Room Creation
- * Keeps DAILY_API_KEY safe on the server — never exposed to client browsers
+ * Keeps DAILY_API_KEY safe on the server: never exposed to client browsers
  */
 
 export default async function handler(req, res) {

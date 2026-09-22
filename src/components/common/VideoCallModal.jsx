@@ -2,9 +2,9 @@ import { useState, useEffect, useRef } from 'react';
 import { X, Video, VideoOff } from 'lucide-react';
 
 /**
- * VideoCallModal — Daily.co embed for Video Assistance (F3)
+ * VideoCallModal: Daily.co embed for Video Assistance (F3)
  * Creates a unique room per task (tbi-task-{requestId})
- * No phone number sharing needed — room name is the only identifier
+ * No phone number sharing needed: room name is the only identifier
  */
 export default function VideoCallModal({ isOpen, onClose, requestId, title = 'Video Help' }) {
   const [joined, setJoined] = useState(false);
@@ -156,7 +156,7 @@ export default function VideoCallModal({ isOpen, onClose, requestId, title = 'Vi
 
       {/* Footer note */}
       <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.5)', fontSize: 'var(--font-size-xs)', paddingBottom: 16 }}>
-        🔒 Secure video — no phone numbers shared
+        Secure video: no phone numbers shared
       </p>
     </div>
   );

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { KYC_STATUS, ROLES } from '../../constants';
 import Modal from '../../components/common/Modal';
+import { ShieldCheck } from 'lucide-react';
 function formatDateTime(dateStr) {
   return new Date(dateStr).toLocaleDateString('en-IN', {
     day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
@@ -30,7 +31,7 @@ export default function PendingApprovals() {
       setProcessing(null);
     }, 800);
   }
-  const roleLabel = (role) => role === ROLES.SENIOR ? ' Senior' : role === ROLES.VOLUNTEER ? ' Volunteer' : ' Admin';
+  const roleLabel = (role) => role === ROLES.SENIOR ? 'Senior Citizen' : role === ROLES.VOLUNTEER ? 'Volunteer' : 'Admin';
   return (
     <div className="page-content">
       <div className="page-header">
@@ -44,7 +45,9 @@ export default function PendingApprovals() {
       <div style={{ padding: 'var(--space-5)' }}>
         {pendingApprovals.length === 0 ? (
           <div className="empty-state">
-            <div className="empty-state-icon"></div>
+            <div className="empty-state-icon" style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+              <ShieldCheck size={36} color="var(--color-text-muted)" />
+            </div>
             <h3>All Caught Up!</h3>
             <p style={{ fontSize: 'var(--font-size-sm)' }}>No pending approvals at this time.</p>
           </div>
@@ -66,7 +69,7 @@ export default function PendingApprovals() {
                     {roleLabel(user.role)} · Age {user.age}
                   </div>
                 </div>
-                <span className="badge badge-kyc-pending"> Pending</span>
+                <span className="badge badge-kyc-pending">Pending</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)', marginBottom: 'var(--space-4)' }}>
                 <div> {user.phone || 'Phone not provided'}</div>
@@ -97,7 +100,7 @@ export default function PendingApprovals() {
                   onClick={() => handleApprove(user.id)}
                   disabled={!!processing}
                 >
-                  {processing === user.id ? 'Processing…' : '✓ Approve'}
+                  {processing === user.id ? 'Processing…' : 'Approve'}
                 </button>
               </div>
             </div>
@@ -108,20 +111,25 @@ export default function PendingApprovals() {
         {selectedUser && (
           <div>
             <div className="flex items-center gap-3" style={{ marginBottom: 'var(--space-5)' }}>
-              <div className="avatar avatar-lg">{selectedUser.name?.[0] || 'U'}</div>
+              <div className="avatar avatar-lg" style={{ background: selectedUser.role === ROLES.SENIOR ? 'var(--color-primary)' : '#27AE60' }}>
+                {selectedUser.name[0]}
+              </div>
               <div>
-                <h3>{selectedUser.name}</h3>
-                <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>{roleLabel(selectedUser.role)}</div>
+                <h3 style={{ margin: 0 }}>{selectedUser.name}</h3>
+                <div style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>
+                  {roleLabel(selectedUser.role)} · Age {selectedUser.age}
+                </div>
               </div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', marginBottom: 'var(--space-5)' }}>
               {[
-                { label: 'Phone', value: selectedUser.phone || '-' },
-                { label: 'Age', value: selectedUser.age || '-' },
-                { label: 'Area', value: `${selectedUser.area || 'Mumbai'}, ${selectedUser.pincode || '400001'}` },
-                { label: 'Document', value: `${selectedUser.document_type || selectedUser.documentType || selectedUser.kyc?.documentType || 'Aadhaar'} ****${selectedUser.aadhaar_last4 || selectedUser.aadhaarLast4 || selectedUser.kyc?.aadhaarLast4 || 'XXXX'}` },
+                { label: 'Phone', value: selectedUser.phone || 'Not provided' },
+                { label: 'Area', value: selectedUser.area || 'Mumbai' },
+                { label: 'Pincode', value: selectedUser.pincode || '400001' },
+                { label: 'Document Type', value: selectedUser.document_type || selectedUser.documentType || selectedUser.kyc?.documentType || 'Aadhaar' },
+                { label: 'Aadhaar (Last 4)', value: `•••• •••• ${selectedUser.aadhaar_last4 || selectedUser.aadhaarLast4 || selectedUser.kyc?.aadhaarLast4 || 'XXXX'}` },
                 { label: 'Submitted', value: formatDateTime(selectedUser.submitted_on || selectedUser.submittedOn || selectedUser.created_at) },
-                { label: 'Notes', value: selectedUser.notes || '-' },
+                { label: 'Notes', value: selectedUser.notes || 'None' },
               ].map(({ label, value }) => (
                 <div key={label} className="flex justify-between" style={{ borderBottom: '1px solid var(--color-border)', paddingBottom: 'var(--space-2)' }}>
                   <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>{label}</span>
@@ -134,7 +142,7 @@ export default function PendingApprovals() {
                 Reject
               </button>
               <button className="btn btn-success" style={{ flex: 2 }} onClick={() => handleApprove(selectedUser.id)}>
-                ✓ Approve Member
+                Approve Member
               </button>
             </div>
           </div>

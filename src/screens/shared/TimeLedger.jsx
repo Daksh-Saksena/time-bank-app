@@ -25,7 +25,7 @@ export default function TimeLedger() {
         <div className="page-header-inner">
           <div>
             <h2 className="page-title">सेवा रिकॉर्ड (Seva Record)</h2>
-            <p className="page-subtitle">Pure Seva — Tracked for gratitude & community appreciation</p>
+            <p className="page-subtitle">Pure Seva: Tracked for gratitude & community appreciation</p>
           </div>
         </div>
       </div>
@@ -44,7 +44,7 @@ export default function TimeLedger() {
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
             <span style={{ fontSize: '0.85rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', opacity: 0.9 }}>
-              🕊️ कुल सेवा योगदान (Total Seva Given)
+              कुल सेवा योगदान (Total Seva Given)
             </span>
             <span style={{ fontSize: '0.72rem', background: 'rgba(255,255,255,0.2)', padding: '4px 10px', borderRadius: 999, fontWeight: 700 }}>
               No Spendable Credits

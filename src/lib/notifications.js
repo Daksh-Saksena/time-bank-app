@@ -167,7 +167,7 @@ export async function notifyTrustedVolunteers({ requestId, seniorId, serviceType
   }
 
   if (!volunteerIds || volunteerIds.length === 0) {
-    // No trusted circle — broadcast immediately
+    // No trusted circle: broadcast immediately
     await broadcastToNearbyVolunteers({ requestId, serviceType, seniorName, location, pincode });
     return;
   }
@@ -187,11 +187,11 @@ export async function notifyTrustedVolunteers({ requestId, seniorId, serviceType
         await storeNotification({
           userId: v.id,
           type: NOTIFICATION_TYPES.NEW_REQUEST,
-          title: `🙏 New Request from ${seniorName}`,
+          title: `New Request from ${seniorName}`,
           body: `${serviceType} help needed at ${location}. Please accept or decline.`,
           requestId,
         });
-        showBrowserNotification(`New Request — ${seniorName}`, `${serviceType} help needed. Tap to view.`);
+        showBrowserNotification(`New Request: ${seniorName}`, `${serviceType} help needed. Tap to view.`);
       }
     }
   } catch (e) {
@@ -233,7 +233,7 @@ export async function broadcastToNearbyVolunteers({ requestId, serviceType, seni
       await storeNotification({
         userId: v.id,
         type: NOTIFICATION_TYPES.NEW_REQUEST,
-        title: `🆘 Help Needed: ${seniorName}`,
+        title: `Help Needed: ${seniorName}`,
         body: `${serviceType} request at ${location}. Be the first to accept!`,
         requestId,
       });
@@ -248,7 +248,7 @@ export async function notifySeniorAccepted({ seniorId, volunteerName, requestId 
   await storeNotification({
     userId: seniorId,
     type: NOTIFICATION_TYPES.REQUEST_ACCEPTED,
-    title: `✅ ${volunteerName} accepted your request!`,
+    title: `${volunteerName} accepted your request!`,
     body: 'They are on their way to help you.',
     requestId,
   });
@@ -260,7 +260,7 @@ export async function notifySeniorOnWay({ seniorId, volunteerName, requestId }) 
   await storeNotification({
     userId: seniorId,
     type: NOTIFICATION_TYPES.VOLUNTEER_ON_WAY,
-    title: `🏃 ${volunteerName} is on the way!`,
+    title: `${volunteerName} is on the way!`,
     body: 'Please be ready with your 4-digit PIN.',
     requestId,
   });
@@ -271,7 +271,7 @@ export async function notifySeniorRateTask({ seniorId, volunteerName, requestId 
   await storeNotification({
     userId: seniorId,
     type: NOTIFICATION_TYPES.RATING_REQUIRED,
-    title: `⭐ How was ${volunteerName}?`,
+    title: `How was ${volunteerName}?`,
     body: 'Please rate your experience to close this request.',
     requestId,
   });
@@ -282,7 +282,7 @@ export async function notifyAdminLowRating({ adminId, volunteerName, avgRating }
   await storeNotification({
     userId: adminId,
     type: 'low_rating_alert',
-    title: `⚠️ Low Rating Alert: ${volunteerName}`,
+    title: `Low Rating Alert: ${volunteerName}`,
     body: `Average rating ${avgRating.toFixed(1)} in last 5 tasks. Please review.`,
   });
 }

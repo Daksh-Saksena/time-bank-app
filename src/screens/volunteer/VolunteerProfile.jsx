@@ -48,9 +48,9 @@ export default function VolunteerProfile() {
     setVolunteerStatus(newStatus);
     await updateVolunteerStatus(newStatus);
     const labels = {
-      [VOLUNTEER_STATUS.AVAILABLE]: '🟢 You are now Available for requests',
-      [VOLUNTEER_STATUS.BUSY]: '🟡 You are now Busy — not accepting new requests',
-      [VOLUNTEER_STATUS.DND]: '🔴 Do Not Disturb — notifications paused',
+      [VOLUNTEER_STATUS.AVAILABLE]: 'You are now Available for requests',
+      [VOLUNTEER_STATUS.BUSY]: 'You are now Busy: not accepting new requests',
+      [VOLUNTEER_STATUS.DND]: 'Do Not Disturb: notifications paused',
     };
     showToast(labels[newStatus] || 'Status updated');
   }
@@ -87,7 +87,7 @@ export default function VolunteerProfile() {
         <div className="page-header-inner">
           <div>
             <h2 className="page-title">स्वयंसेवक प्रोफ़ाइल (Volunteer Profile)</h2>
-            <p className="page-subtitle">Time Bank of India — Pure Seva</p>
+            <p className="page-subtitle">Time Bank of India: Pure Seva</p>
           </div>
           <button className="btn btn-ghost btn-sm" onClick={() => { logout(); navigate('/'); }} style={{ fontWeight: 700 }}>
             लॉगआउट
@@ -156,7 +156,7 @@ export default function VolunteerProfile() {
                     borderRadius: 999,
                   }}
                 >
-                  ⭐ No reviews yet (नया स्वयंसेवक)
+                  No reviews yet (नया स्वयंसेवक)
                 </span>
               )}
             </div>
@@ -243,9 +243,9 @@ export default function VolunteerProfile() {
             <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: 8 }}>मेरी उपलब्धता (My Availability):</div>
             <div style={{ display: 'flex', gap: 8 }}>
               {[
-                { status: VOLUNTEER_STATUS.AVAILABLE, label: '🟢 Ready', color: '#16A34A', bg: '#DCFCE7' },
-                { status: VOLUNTEER_STATUS.BUSY, label: '🟡 Busy', color: '#D97706', bg: '#FEF3C7' },
-                { status: VOLUNTEER_STATUS.DND, label: '🔴 DND', color: '#DC2626', bg: '#FEE2E2' },
+                { status: VOLUNTEER_STATUS.AVAILABLE, label: 'Ready', color: '#16A34A', bg: '#DCFCE7' },
+                { status: VOLUNTEER_STATUS.BUSY, label: 'Busy', color: '#D97706', bg: '#FEF3C7' },
+                { status: VOLUNTEER_STATUS.DND, label: 'DND', color: '#DC2626', bg: '#FEE2E2' },
               ].map(({ status, label, color, bg }) => (
                 <button
                   key={status}
@@ -271,9 +271,9 @@ export default function VolunteerProfile() {
 
             {/* DND Description & Night Notice */}
             <div style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', marginTop: 8 }}>
-              {volunteerStatus === VOLUNTEER_STATUS.DND ? '🔴 Do Not Disturb: नए अनुरोधों की सूचनाएं मौन रहेंगी' :
-               volunteerStatus === VOLUNTEER_STATUS.BUSY ? '🟡 Busy: आप अभी नए अनुरोध स्वीकार नहीं कर रहे हैं' :
-               '🟢 Ready: आपके आस-पास के सेवा अनुरोधों की सूचना प्राप्त होगी'}
+              {volunteerStatus === VOLUNTEER_STATUS.DND ? 'Do Not Disturb: नए अनुरोधों की सूचनाएं मौन रहेंगी' :
+               volunteerStatus === VOLUNTEER_STATUS.BUSY ? 'Busy: आप अभी नए अनुरोध स्वीकार नहीं कर रहे हैं' :
+               'Ready: आपके आस-पास के सेवा अनुरोधों की सूचना प्राप्त होगी'}
             </div>
 
             {isNightDND && (

@@ -1,7 +1,24 @@
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { REQUEST_STATUS, ROLES, SERVICE_TYPES, SERVICE_LABELS, SERVICE_ICONS, formatMinutes } from '../../constants';
-import { Users, Clock, AlertTriangle, CheckCircle, Activity, Star, Plus, Shield, Phone, HeartHandshake } from 'lucide-react';
+import {
+  Users,
+  Clock,
+  AlertTriangle,
+  CheckCircle,
+  Activity,
+  Star,
+  Plus,
+  Shield,
+  Phone,
+  HeartHandshake,
+  ShieldAlert,
+  ShieldCheck,
+  ClipboardList,
+  CheckCircle2,
+  FileText,
+  Award,
+} from 'lucide-react';
 import { getPincodeLocation } from '../../lib/geo';
 
 export default function AdminDashboard() {
@@ -16,7 +33,9 @@ export default function AdminDashboard() {
   if (!isAdmin) {
     return (
       <div className="page-content" style={{ padding: 'var(--space-6)', textAlign: 'center', minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ fontSize: '3rem', marginBottom: 16 }}>🔒</div>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+          <ShieldAlert size={56} color="var(--color-primary)" />
+        </div>
         <h3 style={{ marginBottom: 8 }}>Access Restricted</h3>
         <p style={{ color: 'var(--color-text-muted)', marginBottom: 24, maxWidth: 320 }}>
           You do not have administrative privileges to view this dashboard.
@@ -89,7 +108,7 @@ export default function AdminDashboard() {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
               <span className="badge" style={{ background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none', fontSize: '0.75rem', fontWeight: 800 }}>
-                {isSuperAdmin ? '👑 Super Admin' : '🛡️ Pincode Administrator'}
+                {isSuperAdmin ? 'Super Admin' : 'Pincode Administrator'}
               </span>
             </div>
             <h2 style={{ color: 'white', fontWeight: 800, marginBottom: 4 }}>
@@ -325,13 +344,13 @@ export default function AdminDashboard() {
         <h3 style={{ marginBottom: 'var(--space-3)' }}>Quick Actions</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 'var(--space-3)' }}>
           {[
-            { label: 'Create for Member', icon: '🛡️', path: '/admin/create-request', badge: 'New' },
-            { label: 'Request Lifecycle', icon: '📋', path: '/admin/requests', badge: `${pincodeRequests.length}` },
-            { label: 'KYC Approvals', icon: '✅', path: '/admin/approvals', badge: scopedPendingApprovals.length > 0 ? `${scopedPendingApprovals.length}` : null },
-            { label: 'Member Directory', icon: '👥', path: '/admin/members', badge: `${pincodeMembers.length}` },
-            { label: 'Export Reports', icon: '📊', path: '/admin/reports', badge: 'Excel / PDF' },
-            { label: 'Seva Wall', icon: '🏆', path: '/leaderboard', badge: 'Live' },
-          ].map(({ label, icon, path, badge }) => (
+            { label: 'Create for Member', icon: ShieldCheck, path: '/admin/create-request', badge: 'New', color: '#2563EB' },
+            { label: 'Request Lifecycle', icon: ClipboardList, path: '/admin/requests', badge: `${pincodeRequests.length}`, color: '#059669' },
+            { label: 'KYC Approvals', icon: CheckCircle2, path: '/admin/approvals', badge: scopedPendingApprovals.length > 0 ? `${scopedPendingApprovals.length}` : null, color: '#D97706' },
+            { label: 'Member Directory', icon: Users, path: '/admin/members', badge: `${pincodeMembers.length}`, color: '#7C3AED' },
+            { label: 'Export Reports', icon: FileText, path: '/admin/reports', badge: 'Excel / PDF', color: '#0284C7' },
+            { label: 'Seva Wall', icon: Award, path: '/leaderboard', badge: 'Live', color: '#DC2626' },
+          ].map(({ label, icon: IconComponent, path, badge, color }) => (
             <button
               key={label}
               className="card"
@@ -368,7 +387,9 @@ export default function AdminDashboard() {
                   {badge}
                 </span>
               )}
-              <span style={{ fontSize: '1.8rem' }}>{icon}</span>
+              <div style={{ width: 42, height: 42, borderRadius: 10, background: `${color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <IconComponent size={22} color={color} />
+              </div>
               <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: 700, color: 'var(--color-text-primary)' }}>
                 {label}
               </span>

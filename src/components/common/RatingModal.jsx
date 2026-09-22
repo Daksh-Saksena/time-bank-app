@@ -3,7 +3,7 @@ import Modal from './Modal';
 import { useApp } from '../../context/AppContext';
 import { ROLES, RATING_TAGS_POSITIVE, RATING_TAGS_NEGATIVE } from '../../constants';
 import { supabase } from '../../lib/supabase';
-import { Mic, Square, Volume2 } from 'lucide-react';
+import { Mic, Square, Volume2, Star, Camera } from 'lucide-react';
 
 // ── Large Emoji Star Rating ───────────────────────────────
 const STAR_EMOJIS = ['😞', '😕', '😐', '🙂', '😍'];
@@ -24,7 +24,7 @@ function EmojiStarRating({ value, onChange }) {
             onMouseLeave={() => setHovered(0)}
             onTouchStart={() => setHovered(s)}
             onTouchEnd={() => { onChange(s); setHovered(0); }}
-            aria-label={`${s} star — ${STAR_LABELS[s - 1]}`}
+            aria-label={`${s} star: ${STAR_LABELS[s - 1]}`}
             style={{
               background: 'none',
               border: 'none',
@@ -179,7 +179,9 @@ export default function RatingModal() {
       <div style={{ maxHeight: '80vh', overflowY: 'auto' }}>
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: 'var(--space-4)' }}>
-          <div style={{ fontSize: '2.5rem', marginBottom: 8 }}>⭐</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+            <Star size={36} color="#F59E0B" fill="#F59E0B" />
+          </div>
           <h3 style={{ marginBottom: 4 }}>
             {isVolunteer ? 'Rate the Senior' : 'Rate your Volunteer'}
           </h3>
@@ -244,7 +246,7 @@ export default function RatingModal() {
               }}
             >
               {isRecording ? <Square size={16} /> : <Mic size={16} />}
-              <span>{isRecording ? `Stop (${recordingSecs}s / 30s)` : '🎙️ Record Voice Feedback'}</span>
+              <span>{isRecording ? `Stop (${recordingSecs}s / 30s)` : 'Record Voice Feedback'}</span>
             </button>
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--color-surface-alt)', borderRadius: 'var(--radius-md)', padding: '8px 12px' }}>
@@ -262,7 +264,8 @@ export default function RatingModal() {
           <p style={{ fontSize: 'var(--font-size-sm)', fontWeight: 600, marginBottom: 8 }}>Photo (optional)</p>
           {!photo ? (
             <label htmlFor="rating-photo" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 16px', border: '1.5px dashed var(--color-border)', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>
-              📷 Add Photo
+              <Camera size={16} />
+              <span>Add Photo</span>
               <input id="rating-photo" type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handlePhoto} />
             </label>
           ) : (
@@ -276,7 +279,7 @@ export default function RatingModal() {
         {/* Required notice */}
         {stars === 0 && (
           <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', textAlign: 'center', marginBottom: 'var(--space-3)' }}>
-            ⭐ Rating is required to close this task
+            Rating is required to close this task
           </p>
         )}
 
@@ -286,7 +289,7 @@ export default function RatingModal() {
           onClick={handleSubmit}
           disabled={stars === 0 || submitting}
         >
-          {submitting ? 'Submitting…' : '✓ Submit Rating & Close Task'}
+          {submitting ? 'Submitting…' : 'Submit Rating & Close Task'}
         </button>
       </div>
     </Modal>

@@ -81,7 +81,7 @@ export default function SeniorProfile() {
         <div className="page-header-inner">
           <div>
             <h2 className="page-title">मेरा प्रोफ़ाइल (My Profile)</h2>
-            <p className="page-subtitle">Time Bank of India — Pure Seva</p>
+            <p className="page-subtitle">Time Bank of India: Pure Seva</p>
           </div>
           <button className="btn btn-ghost btn-sm" onClick={handleLogout} style={{ fontWeight: 700 }}>
             लॉगआउट
@@ -328,7 +328,7 @@ export default function SeniorProfile() {
                 color: 'var(--color-text-primary)',
               }}
             >
-              <span style={{ fontSize: 20 }}>🤝</span>
+              <HeartHandshake size={20} color="var(--color-primary)" />
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 700 }}>मेरा ट्रस्टेड सर्कल (My Trusted Circle)</div>
                 <div style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>पसंदीदा 10 सहायकों की सूची व प्रबंधन</div>

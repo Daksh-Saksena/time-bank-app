@@ -194,7 +194,7 @@ export default function ActiveTask() {
           </div>
         )}
         <div className="alert alert-info" style={{ marginBottom: 'var(--space-5)' }}>
-          🔒 सुरक्षा सत्यापन: सत्र शुरू और समाप्त करते समय 4-अंकीय PIN या QR कोड स्कैन अनिवार्य है।
+          सुरक्षा सत्यापन: सत्र शुरू और समाप्त करते समय 4-अंकीय PIN या QR कोड स्कैन अनिवार्य है।
         </div>
         {!isActive ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
@@ -206,10 +206,10 @@ export default function ActiveTask() {
               onClick={() => setVideoCallOpen(true)}
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, borderColor: '#2563EB', color: '#2563EB', fontWeight: 700 }}
             >
-              <Video size={20} /> 📹 Video Assistance (Daily.co)
+              <Video size={20} /> Video Assistance (Daily.co)
             </button>
             <button className="btn btn-success btn-full btn-lg" onClick={initiateStart} style={{ fontWeight: 800 }}>
-              ▶ Start Session (सत्र शुरू करें)
+              Start Session (सत्र शुरू करें)
             </button>
           </div>
         ) : (
@@ -222,10 +222,10 @@ export default function ActiveTask() {
               onClick={() => setVideoCallOpen(true)}
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, borderColor: '#2563EB', color: '#2563EB', fontWeight: 700 }}
             >
-              <Video size={20} /> 📹 Video Assistance (Daily.co)
+              <Video size={20} /> Video Assistance (Daily.co)
             </button>
             <button className="btn btn-danger btn-full btn-lg" onClick={initiateEnd} style={{ fontWeight: 800 }}>
-              ■ End Session & Record Seva (सत्र समाप्त करें)
+              End Session & Record Seva (सत्र समाप्त करें)
             </button>
           </div>
         )}
@@ -233,7 +233,7 @@ export default function ActiveTask() {
           isOpen={videoCallOpen}
           onClose={() => setVideoCallOpen(false)}
           requestId={req?.id}
-          title={`Video Assistance — ${req?.seniorName}`}
+          title={`Video Assistance: ${req?.seniorName}`}
         />
         {/* Verification method modal */}
         <Modal isOpen={verifyModal === 'verify'} onClose={() => setVerifyModal(null)} title="Choose Verification Method">

@@ -24,6 +24,9 @@ import {
   MapPin,
   ShieldCheck,
   AlertCircle,
+  Bell,
+  Home,
+  ClipboardList,
 } from 'lucide-react';
 import { sanitizeText } from '../../lib/sanitize';
 
@@ -156,7 +159,7 @@ export default function RequestHelp() {
           setForm((p) => ({
             ...p,
             audioUrl: reader.result,
-            description: p.description || `🎙️ बोलकर बताया गया अनुरोध (${SERVICE_LABELS[p.serviceType] || 'मदद'})`,
+            description: p.description || `बोलकर बताया गया अनुरोध (${SERVICE_LABELS[p.serviceType] || 'मदद'})`,
           }));
         };
         stream.getTracks().forEach((t) => t.stop());
@@ -390,7 +393,7 @@ export default function RequestHelp() {
                   marginBottom: 6,
                 }}
               >
-                {sendToTrustedFirst ? <ShieldCheck size={20} /> : <span>📢</span>}
+                {sendToTrustedFirst ? <ShieldCheck size={20} /> : <Bell size={18} />}
                 {sendToTrustedFirst ? 'ट्रस्टेड सर्कल प्राथमिकता (15 मिनट)' : 'स्थानीय स्वयंसेवकों को सूचित किया गया'}
               </div>
               <p style={{ fontSize: '0.9rem', color: 'var(--color-text-primary)', margin: 0, lineHeight: 1.5 }}>
@@ -417,7 +420,8 @@ export default function RequestHelp() {
               }}
               onClick={() => navigate('/senior/home')}
             >
-              <span>🏠 मुख्य पृष्ठ पर जाएँ (Home)</span>
+              <Home size={20} />
+              <span>मुख्य पृष्ठ पर जाएँ (Home)</span>
             </button>
 
             <button
@@ -434,7 +438,8 @@ export default function RequestHelp() {
               }}
               onClick={() => navigate('/my-requests')}
             >
-              <span>📋 मेरे अनुरोध देखें (My Requests)</span>
+              <ClipboardList size={20} />
+              <span>मेरे अनुरोध देखें (My Requests)</span>
             </button>
           </div>
         </div>
@@ -661,7 +666,7 @@ export default function RequestHelp() {
                   padding: '10px 14px',
                 }}
               >
-                <span>📅 एक बार (One Time)</span>
+                <span>एक बार (One Time)</span>
                 <span style={{ fontSize: '0.78rem', fontWeight: 500, color: 'var(--color-text-muted)' }}>Single instance</span>
               </button>
 
@@ -684,7 +689,7 @@ export default function RequestHelp() {
                   padding: '10px 14px',
                 }}
               >
-                <span>🔁 बार-बार (Recurring)</span>
+                <span>बार-बार (Recurring)</span>
                 <span style={{ fontSize: '0.78rem', fontWeight: 500, color: 'var(--color-text-muted)' }}>Regular schedule</span>
               </button>
             </div>
@@ -713,7 +718,7 @@ export default function RequestHelp() {
                       padding: '6px 4px',
                     }}
                   >
-                    ⚡ अभी तुरंत (ASAP)
+                    अभी तुरंत (ASAP)
                   </button>
 
                   <button
@@ -731,7 +736,7 @@ export default function RequestHelp() {
                       padding: '6px 4px',
                     }}
                   >
-                    🌅 आज शाम (6 PM)
+                    आज शाम (6 PM)
                   </button>
 
                   <button
@@ -749,7 +754,7 @@ export default function RequestHelp() {
                       padding: '6px 4px',
                     }}
                   >
-                    ☀️ कल सुबह (9:30 AM)
+                    कल सुबह (9:30 AM)
                   </button>
                 </div>
 
@@ -881,9 +886,13 @@ export default function RequestHelp() {
                       color: '#1E40AF',
                       fontWeight: 600,
                       marginTop: 10,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
                     }}
                   >
-                    📅 हर {recurrencePattern.days.join(', ')} को {recurrencePattern.time} बजे, {recurrencePattern.fromDate} से {recurrencePattern.toDate} तक।
+                    <Calendar size={16} />
+                    <span>हर {recurrencePattern.days.join(', ')} को {recurrencePattern.time} बजे, {recurrencePattern.fromDate} से {recurrencePattern.toDate} तक।</span>
                   </div>
                 )}
               </div>
@@ -900,10 +909,15 @@ export default function RequestHelp() {
                   fontSize: '1rem',
                   fontWeight: 700,
                   borderRadius: 'var(--radius-lg)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
                 }}
                 onClick={() => setStep(1)}
               >
-                ⬅ पीछे (Back)
+                <ArrowLeft size={18} />
+                <span>पीछे (Back)</span>
               </button>
 
               <button
@@ -947,7 +961,7 @@ export default function RequestHelp() {
               }}
             >
               <div style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--color-text-primary)', marginBottom: 6 }}>
-                🎙️ बोलकर बताएं (Speak your request)
+                बोलकर बताएं (Speak your request)
               </div>
               <p style={{ fontSize: '0.88rem', color: 'var(--color-text-secondary)', margin: '0 0 14px' }}>
                 माइक बटन दबाएँ और हिंदी या अंग्रेज़ी में अपनी ज़रूरत बोलें:
@@ -1032,7 +1046,7 @@ export default function RequestHelp() {
                     }}
                   >
                     <Volume2 size={16} color="var(--color-primary)" />
-                    <span>🔊 पढ़कर सुनाएं (Read Aloud)</span>
+                    <span>पढ़कर सुनाएं (Read Aloud)</span>
                   </button>
                 )}
               </div>
@@ -1077,10 +1091,15 @@ export default function RequestHelp() {
                   fontSize: '1rem',
                   fontWeight: 700,
                   borderRadius: 'var(--radius-lg)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
                 }}
                 onClick={() => setStep(2)}
               >
-                ⬅ पीछे (Back)
+                <ArrowLeft size={18} />
+                <span>पीछे (Back)</span>
               </button>
 
               <button
@@ -1147,7 +1166,7 @@ export default function RequestHelp() {
 
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 800, fontSize: '1.05rem', color: sendToTrustedFirst ? 'var(--color-primary)' : 'var(--color-text-primary)' }}>
-                  🙏 पहले ट्रस्टेड सर्कल को भेजें (Trusted Circle First)
+                  पहले ट्रस्टेड सर्कल को भेजें (Trusted Circle First)
                 </div>
                 <div style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', marginTop: 4 }}>
                   आपके {trustedCount > 0 ? `${trustedCount} पसंदीदा सहायकों` : 'पसंदीदा सहायकों (10 तक)'} को पहले 15 मिनट की विशेष सूचना जाएगी।
@@ -1175,7 +1194,7 @@ export default function RequestHelp() {
                   }}
                 >
                   <div style={{ fontWeight: 800, fontSize: '0.95rem', color: form.urgency === URGENCY.NORMAL ? '#059669' : 'var(--color-text-primary)' }}>
-                    🟢 सामान्य (Normal)
+                    सामान्य (Normal)
                   </div>
                   <div style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>सुविधाजनक समय पर</div>
                 </button>
@@ -1194,7 +1213,7 @@ export default function RequestHelp() {
                   }}
                 >
                   <div style={{ fontWeight: 800, fontSize: '0.95rem', color: form.urgency === URGENCY.HIGH ? '#DC2626' : 'var(--color-text-primary)' }}>
-                    🔴 तत्काल (Urgent)
+                    तत्काल (Urgent)
                   </div>
                   <div style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>जल्द से जल्द सहायता</div>
                 </button>
@@ -1213,7 +1232,7 @@ export default function RequestHelp() {
               }}
             >
               <h4 style={{ margin: '0 0 14px', fontSize: '1.05rem', fontWeight: 800, color: 'var(--color-text-primary)' }}>
-                📋 अनुरोध का पूर्वावलोकन (Summary)
+                अनुरोध का पूर्वावलोकन (Summary)
               </h4>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: '0.92rem' }}>
@@ -1228,8 +1247,8 @@ export default function RequestHelp() {
                   <span style={{ color: 'var(--color-text-muted)' }}>शेड्यूल:</span>
                   <span style={{ fontWeight: 700 }}>
                     {isRecurring
-                      ? `🔁 हर ${recurrencePattern.days.join(', ')} (${recurrencePattern.time})`
-                      : `📅 ${form.scheduledDate} (${form.scheduledTime})`}
+                      ? `हर ${recurrencePattern.days.join(', ')} (${recurrencePattern.time})`
+                      : `${form.scheduledDate} (${form.scheduledTime})`}
                   </span>
                 </div>
 
@@ -1266,7 +1285,7 @@ export default function RequestHelp() {
                 disabled={loading}
                 onClick={handleSubmit}
               >
-                <span>{loading ? 'दर्ज हो रहा है… (Posting...)' : '🚀 अनुरोध भेजें (Confirm & Post)'}</span>
+                <span>{loading ? 'दर्ज हो रहा है... (Posting...)' : 'अनुरोध भेजें (Confirm & Post)'}</span>
               </button>
 
               <button
@@ -1277,10 +1296,15 @@ export default function RequestHelp() {
                   fontSize: '1rem',
                   fontWeight: 700,
                   borderRadius: 'var(--radius-lg)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
                 }}
                 onClick={() => setStep(3)}
               >
-                ⬅ विवरण बदलें (Edit Details)
+                <ArrowLeft size={18} />
+                <span>विवरण बदलें (Edit Details)</span>
               </button>
             </div>
           </div>

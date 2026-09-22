@@ -1,19 +1,19 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Check, X, ShieldAlert } from 'lucide-react';
+import { Bell, Check, X, ShieldAlert, CheckCircle2, UserCheck, Star, ShieldCheck, Shield, AlertTriangle } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import Modal from './Modal';
 import { canPerformSevaAction } from '../../constants';
 
 const TYPE_ICONS = {
-  new_request: '🆕',
-  request_accepted: '✅',
-  volunteer_on_way: '🏃',
-  request_completed: '🎉',
-  rating_required: '⭐',
-  kyc_approved: '🛡️',
-  admin_approval: '👑',
-  low_rating_alert: '⚠️',
+  new_request: Bell,
+  request_accepted: CheckCircle2,
+  volunteer_on_way: UserCheck,
+  request_completed: CheckCircle2,
+  rating_required: Star,
+  kyc_approved: ShieldCheck,
+  admin_approval: Shield,
+  low_rating_alert: AlertTriangle,
 };
 
 export default function NotificationBell() {
@@ -128,13 +128,16 @@ export default function NotificationBell() {
         <div style={{ maxHeight: '70vh', overflowY: 'auto' }}>
           {notifications.length === 0 ? (
             <div style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--color-text-muted)' }}>
-              <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>🔔</div>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+                <Bell size={36} color="var(--color-text-muted)" />
+              </div>
               <p style={{ margin: 0, fontWeight: 600 }}>कोई नई सूचना नहीं है (No notifications yet)</p>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
               {notifications.map((n) => {
                 const isNewRequest = n.type === 'new_request';
+                const IconComp = TYPE_ICONS[n.type] || Bell;
                 return (
                   <div
                     key={n.id}
@@ -147,9 +150,9 @@ export default function NotificationBell() {
                       alignItems: 'flex-start',
                     }}
                   >
-                    <span style={{ fontSize: '1.4rem', flexShrink: 0, marginTop: 2 }}>
-                      {TYPE_ICONS[n.type] || '📢'}
-                    </span>
+                    <div style={{ width: 32, height: 32, borderRadius: 8, background: n.read ? '#F1F5F9' : '#DBEAFE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>
+                      <IconComp size={16} color={n.read ? 'var(--color-text-muted)' : 'var(--color-primary)'} />
+                    </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: n.read ? 600 : 800, fontSize: 'var(--font-size-sm)', marginBottom: 2, color: 'var(--color-text-primary)' }}>
                         {n.title}

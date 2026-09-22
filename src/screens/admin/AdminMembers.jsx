@@ -3,14 +3,14 @@ import { useApp } from '../../context/AppContext';
 import { ROLES, KYC_STATUS, REQUEST_STATUS, formatMinutes } from '../../constants';
 import StarRating from '../../components/common/StarRating';
 import Modal from '../../components/common/Modal';
-import { ShieldCheck, UserCheck, Star, Clock, CheckCircle } from 'lucide-react';
+import { ShieldCheck, UserCheck, Star, Clock, CheckCircle, Users } from 'lucide-react';
 import { getPincodeLocation } from '../../lib/geo';
 
 const roleFilters = [
   { value: 'all', label: 'All' },
-  { value: ROLES.SENIOR, label: '👴 Seniors' },
-  { value: ROLES.VOLUNTEER, label: '🤝 Volunteers' },
-  { value: ROLES.ADMIN, label: '🛡️ Admin' },
+  { value: ROLES.SENIOR, label: 'Seniors' },
+  { value: ROLES.VOLUNTEER, label: 'Volunteers' },
+  { value: ROLES.ADMIN, label: 'Admin' },
 ];
 
 export default function AdminMembers() {
@@ -91,7 +91,9 @@ export default function AdminMembers() {
       <div style={{ padding: '0 var(--space-5)' }}>
         {filtered.length === 0 ? (
           <div className="empty-state">
-            <div className="empty-state-icon">👥</div>
+            <div className="empty-state-icon" style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+              <Users size={36} color="var(--color-text-muted)" />
+            </div>
             <h3>No members found</h3>
             <p>No members match the selected filter in this area.</p>
           </div>
@@ -179,7 +181,7 @@ export default function AdminMembers() {
               <div style={{ flex: 1 }}>
                 <h3 style={{ margin: 0, fontWeight: 800 }}>{selectedMember.name}</h3>
                 <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', marginBottom: 4 }}>
-                  {selectedMember.role === ROLES.SENIOR ? '👴 Senior Citizen' : selectedMember.role === ROLES.VOLUNTEER ? '🤝 Volunteer (Sevak)' : '🛡️ Administrator'}
+                  {selectedMember.role === ROLES.SENIOR ? 'Senior Citizen' : selectedMember.role === ROLES.VOLUNTEER ? 'Volunteer (Sevak)' : 'Administrator'}
                 </div>
 
                 {/* Rating display: "No reviews yet" if no reviews */}
@@ -192,7 +194,7 @@ export default function AdminMembers() {
                     </div>
                   ) : (
                     <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
-                      ⭐ No reviews yet (New Sevak)
+                      No reviews yet (New Sevak)
                     </div>
                   )
                 ) : null}

@@ -811,7 +811,7 @@ export function AppProvider({ children }) {
     await storeNotification({
       userId: pendingId,
       type: 'kyc_approved',
-      title: '✅ Your account is verified!',
+      title: 'Your account is verified!',
       body: 'Welcome to Time Bank of India. You can now create and accept requests.',
     });
     setPendingApprovals((prev) => prev.filter((p) => p.id !== pendingId));

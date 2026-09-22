@@ -87,11 +87,11 @@ export default function RequestCard({ request, onAccept, showDistance, distance,
         <div className="flex" style={{ gap: 6, flexDirection: 'column', alignItems: 'flex-end' }}>
           {isHighUrgency ? (
             <span className="badge badge-high" style={{ fontSize: '0.75rem', fontWeight: 800 }}>
-              🔴 High Priority (तत्काल)
+              High Priority (तत्काल)
             </span>
           ) : (
             <span className="badge badge-normal" style={{ fontSize: '0.75rem', fontWeight: 700 }}>
-              🟢 Normal Priority (सामान्य)
+              Normal Priority (सामान्य)
             </span>
           )}
           <span className={`badge ${statusBadgeClass(request.status)}`} style={{ fontWeight: 800, fontSize: '0.78rem' }}>
@@ -115,11 +115,11 @@ export default function RequestCard({ request, onAccept, showDistance, distance,
 
       {/* Schedule, Duration & Senior Meta */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, fontSize: '0.78rem', color: 'var(--color-text-muted)', marginBottom: 10, padding: '6px 10px', background: '#F8FAFC', borderRadius: 'var(--radius-md)' }}>
-        <span>👤 वरिष्ठ: <strong>{request.seniorName}</strong></span>
-        <span>📍 <strong>{request.location || 'Local Area'}</strong> {request.pincode ? `(${request.pincode})` : ''}</span>
-        <span>📅 <strong>{request.scheduledDate || timeAgo(request.createdAt || request.created_at)}</strong></span>
-        {request.scheduledTime && <span>⏰ {request.scheduledTime}</span>}
-        <span>⏱️ अनुमानित: <strong>~{request.estimatedDuration || 30} मिनट</strong></span>
+        <span>वरिष्ठ: <strong>{request.seniorName}</strong></span>
+        <span>स्थान: <strong>{request.location || 'Local Area'}</strong> {request.pincode ? `(${request.pincode})` : ''}</span>
+        <span>दिनांक: <strong>{request.scheduledDate || timeAgo(request.createdAt || request.created_at)}</strong></span>
+        {request.scheduledTime && <span>समय: {request.scheduledTime}</span>}
+        <span>अनुमानित: <strong>~{request.estimatedDuration || 30} मिनट</strong></span>
       </div>
 
       {(request.createdByAdminName || request.created_by_admin_name) && (
@@ -154,7 +154,7 @@ export default function RequestCard({ request, onAccept, showDistance, distance,
               onClick={() => setVideoModalOpen(true)}
             >
               <Video size={16} />
-              <span>📹 Video Assistance</span>
+              <span>Video Assistance</span>
             </button>
           )}
 
@@ -198,7 +198,7 @@ export default function RequestCard({ request, onAccept, showDistance, distance,
 
       {request.rating && (
         <div style={{ marginTop: 'var(--space-3)', padding: '8px 12px', background: 'var(--color-success-bg)', borderRadius: 'var(--radius-md)', fontSize: 'var(--font-size-sm)' }}>
-          ⭐ {request.rating.stars}/5 — {request.rating.review || 'सेवा की सराहना की गई'}
+          Rating: {request.rating.stars}/5: {request.rating.review || 'सेवा की सराहना की गई'}
         </div>
       )}
 
@@ -207,7 +207,7 @@ export default function RequestCard({ request, onAccept, showDistance, distance,
         isOpen={videoModalOpen}
         onClose={() => setVideoModalOpen(false)}
         requestId={request.id}
-        title={`Video Assistance — ${request.seniorName}`}
+        title={`Video Assistance: ${request.seniorName}`}
       />
     </div>
   );

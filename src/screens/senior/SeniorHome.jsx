@@ -5,7 +5,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import { formatMinutes, REQUEST_STATUS } from '../../constants';
 import { SOSButton } from '../../components/common/SOSButton';
 import SeniorQRModal from '../../components/common/SeniorQRModal';
-import { Globe, Pill, ShoppingCart, Landmark, Users } from 'lucide-react';
+import { Globe, Pill, ShoppingCart, Landmark, Users, Clock, Mic, Key, MapPin, HeartHandshake } from 'lucide-react';
 
 export default function SeniorHome() {
   const { currentUser, getUserRequests, seniorMode } = useApp();
@@ -41,7 +41,7 @@ export default function SeniorHome() {
                 }}
               >
                 <Globe size={11} />
-                <span>🌐 {t('language', 'Language')}</span>
+                <span>{t('language', 'Language')}</span>
               </button>
             </div>
             <h2 style={{ color: 'white', fontWeight: 800, marginBottom: 'var(--space-3)' }}>
@@ -70,7 +70,7 @@ export default function SeniorHome() {
 
               <div style={{ background: 'rgba(255,255,255,0.15)', padding: '6px 12px', borderRadius: 'var(--radius-md)' }}>
                 <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'white' }}>
-                  {currentUser?.pincode || '—'}
+                  {currentUser?.pincode || 'N/A'}
                 </div>
                 <div style={{ fontSize: '10px', opacity: 0.85, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   Pincode
@@ -78,8 +78,8 @@ export default function SeniorHome() {
               </div>
             </div>
           </div>
-          <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: '50%', width: 60, height: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', flexShrink: 0 }}>
-            {currentUser?.name?.[0] || '🧓'}
+          <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: '50%', width: 60, height: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.6rem', fontWeight: 800, color: 'white', flexShrink: 0 }}>
+            {currentUser?.name?.[0] || 'M'}
           </div>
         </div>
       </div>
@@ -87,7 +87,7 @@ export default function SeniorHome() {
       {/* KYC Warning notice if pending */}
       {currentUser?.kyc_status === 'pending' && (
         <div style={{ margin: 'var(--space-3) var(--space-5) 0', background: '#FEF9E7', border: '1px solid #F39C12', borderRadius: 'var(--radius-md)', padding: '10px 14px', fontSize: 'var(--font-size-xs)', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: '1.2rem' }}>⏳</span>
+          <Clock size={16} color="#F39C12" />
           <div>
             <strong>KYC Under Review:</strong> Your ID documents are being verified by your local Pincode Admin. You can still post requests.
           </div>
@@ -99,7 +99,7 @@ export default function SeniorHome() {
         <div style={{ margin: 'var(--space-4) var(--space-5) 0', background: '#FEF5E7', border: '1.5px solid #F39C12', borderRadius: 'var(--radius-lg)', padding: 'var(--space-4)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
             <div style={{ fontWeight: 800, fontSize: 'var(--font-size-base)', color: '#B7950B' }}>
-              ⚡ {t('activeRequest', 'Active Request in Progress')}
+              {t('activeRequest', 'Active Request in Progress')}
             </div>
             <span className="badge badge-warning" style={{ textTransform: 'uppercase', fontSize: 10 }}>
               {activeRequests[0].status.replace('_', ' ')}
@@ -109,21 +109,22 @@ export default function SeniorHome() {
             <strong>{activeRequests[0].assignedVolunteerName || 'A volunteer'}</strong> is assisting you with your <strong>{activeRequests[0].serviceType}</strong> request.
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button className="btn btn-accent btn-sm" onClick={() => setShowQR(true)} style={{ minHeight: 44 }}>
-              🔑 {t('showPinQr', 'Show My 4-Digit PIN / QR')}
+            <button className="btn btn-accent btn-sm" onClick={() => setShowQR(true)} style={{ minHeight: 44, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <Key size={16} />
+              <span>{t('showPinQr', 'Show My 4-Digit PIN / QR')}</span>
             </button>
             <button
               className="btn btn-outline btn-sm"
               onClick={() => navigate('/senior/my-requests')}
               style={{ minHeight: 44, background: 'white' }}
             >
-              📋 View Request Details
+              View Request Details
             </button>
           </div>
         </div>
       )}
 
-      {/* Voice Request Button — High-Contrast Accessible (>60dp) */}
+      {/* Voice Request Button: High-Contrast Accessible (>60dp) */}
       <div style={{ padding: 'var(--space-4) var(--space-5) var(--space-2)' }}>
         <button
           className="btn btn-primary btn-full"
@@ -144,7 +145,7 @@ export default function SeniorHome() {
           }}
           aria-label="बोलकर मदद माँगें - Speak your request"
         >
-          <span style={{ fontSize: '2.2rem' }}>🎙️</span>
+          <Mic size={28} />
           <div style={{ textAlign: 'left' }}>
             <div style={{ fontSize: '1.25rem', fontWeight: 800, lineHeight: 1.2 }}>बोलकर मदद माँगें</div>
             <div style={{ fontSize: 'var(--font-size-xs)', fontWeight: 500, opacity: 0.9 }}>Speak Request with Voice Note</div>
@@ -220,8 +221,8 @@ export default function SeniorHome() {
               minHeight: 64,
             }}
           >
-            <div style={{ fontSize: '1.6rem', background: '#FDEDEC', padding: 8, borderRadius: 10, lineHeight: 1 }}>
-              👥
+            <div style={{ background: '#FDEDEC', padding: 8, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Users size={22} color="var(--color-primary)" />
             </div>
             <div>
               <div style={{ fontWeight: 700, fontSize: 'var(--font-size-xs)' }}>विश्वस्त साथी</div>
@@ -245,8 +246,8 @@ export default function SeniorHome() {
               minHeight: 64,
             }}
           >
-            <div style={{ fontSize: '1.6rem', background: '#E8F8F5', padding: 8, borderRadius: 10, lineHeight: 1 }}>
-              📍
+            <div style={{ background: '#E8F8F5', padding: 8, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <MapPin size={22} color="#16A085" />
             </div>
             <div>
               <div style={{ fontWeight: 700, fontSize: 'var(--font-size-xs)' }}>आसपास का नक्शा</div>
@@ -271,7 +272,9 @@ export default function SeniorHome() {
 
         {myRequests.length === 0 ? (
           <div className="empty-state" style={{ padding: '24px 16px', background: 'var(--color-surface-alt)', borderRadius: 'var(--radius-lg)' }}>
-            <div className="empty-state-icon">🤝</div>
+            <div className="empty-state-icon" style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+              <HeartHandshake size={36} color="var(--color-text-muted)" />
+            </div>
             <p style={{ fontWeight: 600, marginBottom: 4 }}>अभी तक कोई अनुरोध नहीं किया गया है।</p>
             <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
               ऊपर दिए गए किसी भी बटन को दबाकर सेवा प्राप्त करें।

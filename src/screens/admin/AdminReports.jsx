@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useApp } from '../../context/AppContext';
 import { REQUEST_STATUS, ROLES, formatMinutes, SERVICE_TYPES, SERVICE_LABELS, SERVICE_ICONS } from '../../constants';
-import { BarChart2, Users, AlertTriangle, Download, FileText, TrendingUp, ShieldCheck, Filter } from 'lucide-react';
+import { BarChart2, Users, AlertTriangle, Download, FileText, TrendingUp, ShieldCheck, Filter, Clock } from 'lucide-react';
 import { getPincodeLocation } from '../../lib/geo';
 
 // ── Mini bar chart using CSS ──────────────────────────────
@@ -116,7 +116,7 @@ export default function AdminReports() {
 
       // Summary sheet
       const summaryData = [
-        ['Time Bank of India — Pure Seva Community Report', `Generated: ${new Date().toLocaleDateString('en-IN')}`],
+        ['Time Bank of India: Pure Seva Community Report', `Generated: ${new Date().toLocaleDateString('en-IN')}`],
         ['Jurisdiction', selectedPincode === 'all' ? 'All India (Cross-Pincode)' : `Pincode ${selectedPincode}`],
         ['Model', 'Pure Seva (Free voluntary community service, time tracked for gratitude & reporting)'],
         [],
@@ -162,7 +162,7 @@ export default function AdminReports() {
 
       doc.setFontSize(18);
       doc.setTextColor(26, 35, 126);
-      doc.text('Time Bank of India — Pure Seva Report', 20, y); y += 9;
+      doc.text('Time Bank of India: Pure Seva Report', 20, y); y += 9;
 
       doc.setFontSize(10);
       doc.setTextColor(100, 100, 100);
@@ -187,8 +187,8 @@ export default function AdminReports() {
       doc.setFontSize(9);
       volunteerReport.slice(0, 15).forEach((v) => {
         if (y > 270) { doc.addPage(); y = 20; }
-        const ratingStr = v.avgRating ? `⭐ ${v.avgRating} (${v.reviewCount})` : 'No reviews yet';
-        doc.text(`  ${v.name} — ${formatMinutes(v.totalHours)} seva, Complete: ${v.completePct}%, Rating: ${ratingStr}`, 20, y);
+        const ratingStr = v.avgRating ? `Rating: ${v.avgRating} (${v.reviewCount})` : 'No reviews yet';
+        doc.text(`  ${v.name}: ${formatMinutes(v.totalHours)} seva, Complete: ${v.completePct}%, Rating: ${ratingStr}`, 20, y);
         y += 5.5;
       });
 
@@ -199,7 +199,7 @@ export default function AdminReports() {
         doc.setFontSize(9);
         vulnerableSeniors.forEach((s) => {
           if (y > 270) { doc.addPage(); y = 20; }
-          doc.text(`  • ${s.name} — ${s.area || '-'} · ${s.phone || 'No phone'}`, 20, y); y += 5.5;
+          doc.text(`  • ${s.name}: ${s.area || '-'} · ${s.phone || 'No phone'}`, 20, y); y += 5.5;
         });
       }
 
@@ -217,7 +217,9 @@ export default function AdminReports() {
       <div className="page-content">
         <div className="page-header"><h2 className="page-title">Reports</h2></div>
         <div style={{ textAlign: 'center', padding: 'var(--space-10)', color: 'var(--color-text-muted)' }}>
-          <div style={{ fontSize: '2rem', marginBottom: 12 }}>⏳</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+            <Clock size={32} color="var(--color-text-muted)" />
+          </div>
           <p>Generating reports…</p>
         </div>
       </div>
@@ -231,7 +233,7 @@ export default function AdminReports() {
       <div className="page-header">
         <div className="page-header-inner flex justify-between items-center">
           <div>
-            <h2 className="page-title">📊 Seva & Analytics Reports</h2>
+            <h2 className="page-title">Seva & Analytics Reports</h2>
             <p className="page-subtitle">
               {selectedPincode === 'all'
                 ? 'All India · Cross-Pincode Community Reporting'
@@ -271,10 +273,10 @@ export default function AdminReports() {
               value={selectedPincode}
               onChange={(e) => setSelectedPincode(e.target.value)}
             >
-              <option value="all">🇮🇳 All India (All Pincodes Combined)</option>
-              <option value="400001">📍 400001 — Colaba, Mumbai</option>
-              <option value="110001">📍 110001 — Connaught Place, New Delhi</option>
-              <option value="560001">📍 560001 — MG Road, Bengaluru</option>
+              <option value="all">All India (All Pincodes Combined)</option>
+              <option value="400001">400001: Colaba, Mumbai</option>
+              <option value="110001">110001: Connaught Place, New Delhi</option>
+              <option value="560001">560001: MG Road, Bengaluru</option>
             </select>
           </div>
         </div>
@@ -282,7 +284,7 @@ export default function AdminReports() {
 
       <div style={{ padding: '0 var(--space-5) var(--space-5)' }}>
         {/* Today Summary */}
-        <h3 style={{ marginBottom: 'var(--space-3)' }}>📅 Today's Activity</h3>
+        <h3 style={{ marginBottom: 'var(--space-3)' }}>Today's Activity</h3>
         <div className="stat-grid" style={{ marginBottom: 'var(--space-5)' }}>
           {[
             { value: stats?.todayCreated || 0, label: 'Created Today', color: 'var(--color-primary)' },
@@ -319,7 +321,7 @@ export default function AdminReports() {
         {vulnerableSeniors.length > 0 && (
           <div className="card" style={{ marginBottom: 'var(--space-4)', border: '2px solid #F59E0B', background: '#FFFBEB' }}>
             <h4 style={{ marginBottom: 'var(--space-2)', display: 'flex', alignItems: 'center', gap: 8, color: '#B45309' }}>
-              <AlertTriangle size={18} /> ⚠️ Vulnerable Seniors Inactivity Alert ({vulnerableSeniors.length})
+              <AlertTriangle size={18} /> Vulnerable Seniors Inactivity Alert ({vulnerableSeniors.length})
             </h4>
             <p style={{ fontSize: 'var(--font-size-xs)', color: '#92400E', marginBottom: 'var(--space-3)' }}>
               These seniors have had 0 community requests or contact in the last 14+ days.

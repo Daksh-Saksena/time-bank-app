@@ -3,12 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { ROLES } from '../../constants';
 import Modal from './Modal';
+import { Users, HeartHandshake, Shield, Award, Clock } from 'lucide-react';
 
 const ROLE_META = {
-  [ROLES.SENIOR]: { emoji: '🧓', label: 'Senior Citizen', color: 'var(--color-primary)', path: '/senior/home' },
-  [ROLES.VOLUNTEER]: { emoji: '🤝', label: 'Volunteer', color: '#27AE60', path: '/volunteer/home' },
-  [ROLES.ADMIN]: { emoji: '🛡️', label: 'Pincode Admin', color: '#8E44AD', path: '/admin/dashboard' },
-  [ROLES.SUPER_ADMIN]: { emoji: '👑', label: 'Super Admin', color: '#C0392B', path: '/admin/dashboard' },
+  [ROLES.SENIOR]: { icon: Users, label: 'Senior Citizen', color: 'var(--color-primary)', path: '/senior/home' },
+  [ROLES.VOLUNTEER]: { icon: HeartHandshake, label: 'Volunteer', color: '#27AE60', path: '/volunteer/home' },
+  [ROLES.ADMIN]: { icon: Shield, label: 'Pincode Admin', color: '#8E44AD', path: '/admin/dashboard' },
+  [ROLES.SUPER_ADMIN]: { icon: Award, label: 'Super Admin', color: '#C0392B', path: '/admin/dashboard' },
 };
 
 export default function RoleSwitcherModal({ isOpen, onClose }) {
@@ -37,7 +38,8 @@ export default function RoleSwitcherModal({ isOpen, onClose }) {
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
           {roles.map((role) => {
-            const meta = ROLE_META[role] || { emoji: '👤', label: role, color: 'var(--color-primary)', path: '/' };
+            const meta = ROLE_META[role] || { icon: Users, label: role, color: 'var(--color-primary)', path: '/' };
+            const RoleIcon = meta.icon;
             const isActive = role === activeRole;
             const needsApproval = role === ROLES.ADMIN && !currentUser?.pincode_admin_approved;
             return (
@@ -56,14 +58,18 @@ export default function RoleSwitcherModal({ isOpen, onClose }) {
                   transition: 'all 0.15s',
                 }}
               >
-                <span style={{ fontSize: '1.8rem' }}>{meta.emoji}</span>
+                <div style={{ width: 44, height: 44, borderRadius: 10, background: `${meta.color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <RoleIcon size={22} color={meta.color} />
+                </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 700, color: isActive ? meta.color : 'var(--color-text-primary)', marginBottom: 2 }}>
                     {meta.label}
                     {isActive && <span style={{ marginLeft: 8, fontSize: 'var(--font-size-xs)', background: meta.color, color: 'white', padding: '2px 8px', borderRadius: 'var(--radius-full)' }}>Active</span>}
                   </div>
                   {needsApproval && (
-                    <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-accent)', fontWeight: 600 }}>⏳ Pending Super Admin Approval</div>
+                    <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-accent)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <Clock size={12} /> Pending Super Admin Approval
+                    </div>
                   )}
                 </div>
                 {!needsApproval && !isActive && (

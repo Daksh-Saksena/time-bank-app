@@ -6,14 +6,14 @@ import { supabase } from '../../lib/supabase';
 import { fetchAreasByPincode } from '../../lib/pincode';
 import { sanitizeText, sanitizePhone } from '../../lib/sanitize';
 import Modal from '../../components/common/Modal';
-import { Eye, RefreshCw, Trash2, Check, AlertCircle, Shield, KeyRound } from 'lucide-react';
+import { Eye, RefreshCw, Trash2, Check, AlertCircle, Shield, KeyRound, CheckCircle2, Clock, Upload, Users, HeartHandshake } from 'lucide-react';
 
 const TOTAL_STEPS = 4;
 const STEP_LABELS = [
-  '1/4 — Your Details',
-  '2/4 — Roles',
-  '3/4 — Verify Identity',
-  '4/4 — Complete',
+  '1/4: Your Details',
+  '2/4: Roles',
+  '3/4: Verify Identity',
+  '4/4: Complete',
 ];
 
 const STEP_TITLES = [
@@ -238,7 +238,9 @@ function FileUploadCard({ label, fileData, onUpload, onRemove, id }) {
             transition: 'all 0.2s ease',
           }}
         >
-          <div style={{ fontSize: '1.8rem', marginBottom: 6 }}>📷</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 6 }}>
+            <Upload size={24} color="var(--color-primary)" />
+          </div>
           <div style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)', color: 'var(--color-primary)' }}>
             Tap to upload {label}
           </div>
@@ -417,19 +419,19 @@ export default function OnboardingFlow() {
   const roleOptions = [
     {
       role: ROLES.MEMBER,
-      emoji: '🧓',
+      icon: Users,
       label: 'Senior Citizen (Member)',
       desc: 'I or a family member would like to receive community care and assistance.',
     },
     {
       role: ROLES.VOLUNTEER,
-      emoji: '🤝',
+      icon: HeartHandshake,
       label: 'Volunteer',
       desc: 'I want to offer Seva and help community members in my area.',
     },
     {
       role: ROLES.ADMIN,
-      emoji: '🛡️',
+      icon: Shield,
       label: 'Pincode Admin',
       desc: 'I manage Time Bank registrations for my pincode. Requires Super Admin approval.',
     },
@@ -463,7 +465,7 @@ export default function OnboardingFlow() {
 
       <div style={{ padding: 'var(--space-6) var(--space-5)' }}>
 
-        {/* ── STEP 0: 1/4 — Your Details ── */}
+        {/* ── STEP 0: 1/4: Your Details ── */}
         {step === 0 && (
           <div>
             <p style={{ color: 'var(--color-text-muted)', marginBottom: 'var(--space-5)', fontSize: 'var(--font-size-sm)' }}>
@@ -515,7 +517,7 @@ export default function OnboardingFlow() {
                   onChange={(e) => handlePincodeChange(e.target.value)}
                   maxLength={6}
                 />
-                {pincodeLoading && <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-primary)', marginTop: 4 }}>🔍 Fetching locality via India Post…</p>}
+                {pincodeLoading && <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-primary)', marginTop: 4 }}>Fetching locality via India Post…</p>}
                 {pincodeError && <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', marginTop: 4 }}>{pincodeError}</p>}
               </div>
 
@@ -560,14 +562,14 @@ export default function OnboardingFlow() {
           </div>
         )}
 
-        {/* ── STEP 1: 2/4 — Roles ── */}
+        {/* ── STEP 1: 2/4: Roles ── */}
         {step === 1 && (
           <div>
             <p style={{ color: 'var(--color-text-muted)', marginBottom: 'var(--space-5)', fontSize: 'var(--font-size-sm)' }}>
               Choose your roles. You can select multiple roles on a single account and switch between them anytime without logging out.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-              {roleOptions.map(({ role, emoji, label, desc }) => {
+              {roleOptions.map(({ role, icon: RoleIcon, label, desc }) => {
                 const selected = form.roles.includes(role);
                 return (
                   <div
@@ -591,7 +593,20 @@ export default function OnboardingFlow() {
                     >
                       {selected && <Check size={16} color="white" />}
                     </div>
-                    <span className="role-card-emoji">{emoji}</span>
+                    <div
+                      style={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: 10,
+                        background: selected ? 'rgba(37,99,235,0.1)' : 'var(--color-surface-alt)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <RoleIcon size={20} color="var(--color-primary)" />
+                    </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 700, fontSize: 'var(--font-size-base)', marginBottom: 4 }}>{label}</div>
                       <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', lineHeight: 1.5 }}>{desc}</div>
@@ -603,7 +618,7 @@ export default function OnboardingFlow() {
 
             {form.roles.includes(ROLES.ADMIN) && (
               <div className="alert alert-info" style={{ marginTop: 'var(--space-4)' }}>
-                <strong>🛡️ Pincode Admin Notice</strong>: Requires approval from the Super Admin. You can begin utilizing Member/Volunteer capabilities immediately while admin credentials are confirmed.
+                <strong>Pincode Admin Notice</strong>: Requires approval from the Super Admin. You can begin utilizing Member/Volunteer capabilities immediately while admin credentials are confirmed.
               </div>
             )}
 
@@ -618,11 +633,11 @@ export default function OnboardingFlow() {
           </div>
         )}
 
-        {/* ── STEP 2: 3/4 — Verify Identity ── */}
+        {/* ── STEP 2: 3/4: Verify Identity ── */}
         {step === 2 && (
           <div>
             <div className="alert alert-warning" style={{ marginBottom: 'var(--space-5)' }}>
-              <strong>🔒 Privacy First:</strong> For your security, Time Bank only asks for the <strong>last 4 digits</strong> of Aadhaar. Document photos are stored securely for local admin verification only.
+              <strong>Privacy First:</strong> For your security, Time Bank only asks for the <strong>last 4 digits</strong> of Aadhaar. Document photos are stored securely for local admin verification only.
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
@@ -676,7 +691,7 @@ export default function OnboardingFlow() {
               {/* ID Front Upload */}
               <FileUploadCard
                 id="doc-front"
-                label="ID Document — Front"
+                label="ID Document: Front"
                 fileData={form.idFront}
                 onUpload={(data) => updateForm('idFront', data)}
                 onRemove={() => updateForm('idFront', null)}
@@ -685,7 +700,7 @@ export default function OnboardingFlow() {
               {/* ID Back Upload */}
               <FileUploadCard
                 id="doc-back"
-                label="ID Document — Back"
+                label="ID Document: Back"
                 fileData={form.idBack}
                 onUpload={(data) => updateForm('idBack', data)}
                 onRemove={() => updateForm('idBack', null)}
@@ -703,11 +718,13 @@ export default function OnboardingFlow() {
           </div>
         )}
 
-        {/* ── STEP 3: 4/4 — Complete & Security Setup ── */}
+        {/* ── STEP 3: 4/4: Complete & Security Setup ── */}
         {step === 3 && (
           <div>
             <div style={{ textAlign: 'center', marginBottom: 'var(--space-5)' }}>
-              <div style={{ fontSize: '3.5rem', marginBottom: 8 }}>🎉</div>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+                <CheckCircle2 size={56} color="var(--color-primary)" />
+              </div>
               <h3 style={{ marginBottom: 4 }}>Welcome, {form.name || 'Member'}!</h3>
               <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>
                 Your Time Bank profile has been prepared with the Pure Seva Model.
@@ -725,7 +742,9 @@ export default function OnboardingFlow() {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                <span style={{ fontSize: '1.4rem', lineHeight: 1 }}>⏳</span>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 2 }}>
+                  <Clock size={20} color="#B7950B" />
+                </div>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 'var(--font-size-sm)', color: '#B7950B', marginBottom: 4 }}>
                     KYC Status: Verification in Review

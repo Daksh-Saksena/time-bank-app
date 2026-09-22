@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useApp } from '../../context/AppContext';
-import { Trophy, Star, Medal, Download, Share2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Trophy, Star, Medal, Download, Share2, ChevronDown, ChevronUp, Clock, Award } from 'lucide-react';
 import { formatMinutes } from '../../constants';
 import { getPincodeLocation } from '../../lib/geo';
 
@@ -11,9 +11,9 @@ const FILTERS = [
 ];
 
 const RANK_STYLES = [
-  { bg: '#FFD700', color: '#7B5200', label: '🥇' },
-  { bg: '#C0C0C0', color: '#444', label: '🥈' },
-  { bg: '#CD7F32', color: '#5C2E00', label: '🥉' },
+  { bg: '#FFD700', color: '#7B5200', label: '#1' },
+  { bg: '#C0C0C0', color: '#444', label: '#2' },
+  { bg: '#CD7F32', color: '#5C2E00', label: '#3' },
 ];
 
 // ── Generate Certificate Canvas ───────────────────────────
@@ -23,33 +23,31 @@ function generateCertificate(volunteer) {
   canvas.height = 560;
   const ctx = canvas.getContext('2d');
 
-  // Background
+  // Background gradient
   const grad = ctx.createLinearGradient(0, 0, 800, 560);
-  grad.addColorStop(0, '#1a237e');
-  grad.addColorStop(1, '#283593');
+  grad.addColorStop(0, '#1B4F72');
+  grad.addColorStop(1, '#2E86AB');
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, 800, 560);
 
-  // Gold border
+  // Border
   ctx.strokeStyle = '#FFD700';
-  ctx.lineWidth = 6;
+  ctx.lineWidth = 8;
   ctx.strokeRect(20, 20, 760, 520);
-
-  // Inner border
-  ctx.strokeStyle = 'rgba(255,215,0,0.4)';
+  ctx.strokeStyle = 'rgba(255,255,255,0.3)';
   ctx.lineWidth = 2;
-  ctx.strokeRect(32, 32, 736, 496);
+  ctx.strokeRect(30, 30, 740, 500);
 
   // Title
   ctx.fillStyle = '#FFD700';
   ctx.font = 'bold 36px Arial, sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('🏆 Seva Samman Patra', 400, 90);
+  ctx.fillText('Seva Samman Patra', 400, 90);
 
   // Subtitle
   ctx.fillStyle = 'rgba(255,255,255,0.8)';
   ctx.font = '18px Arial, sans-serif';
-  ctx.fillText('Time Bank of India — Certificate of Seva Gratitude', 400, 130);
+  ctx.fillText('Time Bank of India: Certificate of Seva Gratitude', 400, 130);
 
   // Divider
   ctx.strokeStyle = '#FFD700';
@@ -83,7 +81,7 @@ function generateCertificate(volunteer) {
   const geo = getPincodeLocation(volunteer.pincode, volunteer.area);
   ctx.font = '16px Arial, sans-serif';
   ctx.fillStyle = 'rgba(255,255,255,0.65)';
-  ctx.fillText(`📍 ${geo.full} (${volunteer.pincode || '400001'})`, 400, 415);
+  ctx.fillText(`${geo.full} (${volunteer.pincode || '400001'})`, 400, 415);
 
   // Footer
   ctx.fillStyle = '#FFD700';
@@ -140,10 +138,12 @@ export default function Leaderboard() {
       {/* Header */}
       <div className="hero-banner">
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '2.5rem', marginBottom: 8 }}>🏆</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+            <Award size={40} color="white" />
+          </div>
           <h2 style={{ color: 'white', fontWeight: 800, marginBottom: 4 }}>Seva Wall</h2>
           <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: 'var(--font-size-sm)' }}>
-            Samman Patra — Honoring our Voluntary Sevadars
+            Samman Patra: Honoring our Voluntary Sevadars
           </p>
         </div>
       </div>
@@ -171,8 +171,8 @@ export default function Leaderboard() {
         {/* View tabs */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 'var(--space-4)', background: 'var(--color-surface-alt)', borderRadius: 'var(--radius-lg)', padding: 4 }}>
           {[
-            { key: 'pincode', label: `📍 My Pincode (${currentUser?.pincode || '400001'})` },
-            { key: 'india', label: '🇮🇳 All India' },
+            { key: 'pincode', label: `My Pincode (${currentUser?.pincode || '400001'})` },
+            { key: 'india', label: 'All India' },
           ].map(({ key, label }) => (
             <button
               key={key}
@@ -213,12 +213,16 @@ export default function Leaderboard() {
         {/* Leaderboard list */}
         {loading ? (
           <div style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--color-text-muted)' }}>
-            <div style={{ fontSize: '2rem', marginBottom: 8 }}>⏳</div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+              <Clock size={32} color="var(--color-text-muted)" />
+            </div>
             <p>Updating Seva Wall…</p>
           </div>
         ) : leaders.length === 0 ? (
           <div className="empty-state">
-            <div className="empty-state-icon">🏆</div>
+            <div className="empty-state-icon" style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+              <Award size={40} color="var(--color-text-muted)" />
+            </div>
             <h3>No Seva Completed Yet</h3>
             <p>No volunteers have completed seva in this period.</p>
             <p style={{ fontSize: 'var(--font-size-sm)' }}>Volunteer to help a senior citizen to earn gratitude!</p>
@@ -269,7 +273,7 @@ export default function Leaderboard() {
                         {isMe && <span style={{ fontSize: 10, background: 'var(--color-primary)', color: 'white', padding: '2px 6px', borderRadius: 'var(--radius-full)' }}>You</span>}
                       </div>
                       <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
-                        📍 {volGeo.full} · {vol.tasksCompleted || 0} task{vol.tasksCompleted === 1 ? '' : 's'}
+                        {volGeo.full} · {vol.tasksCompleted || 0} task{vol.tasksCompleted === 1 ? '' : 's'}
                       </div>
                     </div>
 
@@ -296,7 +300,7 @@ export default function Leaderboard() {
                           </div>
                         ) : (
                           <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', fontStyle: 'italic' }}>
-                            ⭐ No reviews yet (New Sevak)
+                            No reviews yet (New Sevak)
                           </span>
                         )}
                       </div>

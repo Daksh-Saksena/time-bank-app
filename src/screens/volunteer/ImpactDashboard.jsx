@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { formatMinutes } from '../../constants';
 import StarRating from '../../components/common/StarRating';
-import { ArrowLeft, HeartHandshake, CheckCircle2, Users, Star, Award, Calendar } from 'lucide-react';
+import { ArrowLeft, HeartHandshake, CheckCircle2, Users, Star, Award, Lock, Calendar } from 'lucide-react';
 
 function MiniBar({ value, max, color }) {
   return (
@@ -68,7 +68,7 @@ export default function ImpactDashboard() {
                 मेरा सेवा प्रभाव (My Seva Impact)
               </h2>
               <p className="page-subtitle" style={{ color: 'rgba(255,255,255,0.85)', margin: '2px 0 0' }}>
-                Pure Seva Model — Community Recognition
+                Pure Seva Model: Community Recognition
               </p>
             </div>
           </div>
@@ -76,7 +76,7 @@ export default function ImpactDashboard() {
       </div>
 
       <div style={{ padding: 'var(--space-5)' }}>
-        {/* Main Hero Card — Total Seva Given */}
+        {/* Main Hero Card: Total Seva Given */}
         <div
           style={{
             background: 'linear-gradient(135deg, #1E3A8A 0%, #2563EB 100%)',
@@ -122,7 +122,7 @@ export default function ImpactDashboard() {
 
             <div>
               <div style={{ fontWeight: 800, fontSize: '1.35rem' }}>
-                {metrics.avgRating ? `${metrics.avgRating} ★` : '—'}
+                {metrics.avgRating ? `${metrics.avgRating} ★` : 'N/A'}
               </div>
               <div style={{ opacity: 0.8, fontSize: '0.75rem', marginTop: 2 }}>Avg Rating</div>
             </div>
@@ -182,7 +182,9 @@ export default function ImpactDashboard() {
                 opacity: unlocked ? 1 : 0.45,
               }}
             >
-              <span style={{ fontSize: '1.4rem' }}>{unlocked ? '🏅' : '🔒'}</span>
+              <div style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                {unlocked ? <Award size={20} color="#D97706" /> : <Lock size={18} color="var(--color-text-muted)" />}
+              </div>
               <span style={{ fontWeight: unlocked ? 700 : 500, fontSize: 'var(--font-size-sm)', color: unlocked ? 'var(--color-text-primary)' : 'var(--color-text-muted)' }}>
                 {label}
               </span>

@@ -54,14 +54,14 @@ export const DOCUMENT_TYPES = [
 ];
 
 export const RATING_TAGS_POSITIVE = [
-  { key: 'on_time', label: 'Samay par aaye 🕐' },
-  { key: 'respectful', label: 'Vinamra the 🙏' },
-  { key: 'very_helpful', label: 'Bahut madad ki ❤️' },
+  { key: 'on_time', label: 'Samay par aaye (On Time)' },
+  { key: 'respectful', label: 'Vinamra the (Respectful)' },
+  { key: 'very_helpful', label: 'Bahut madad ki (Helpful)' },
 ];
 
 export const RATING_TAGS_NEGATIVE = [
-  { key: 'late', label: 'Der se aaye ⏰' },
-  { key: 'behavior', label: 'Vyavahar theek nahi 😞' },
+  { key: 'late', label: 'Der se aaye (Late)' },
+  { key: 'behavior', label: 'Vyavahar theek nahi (Needs Improvement)' },
 ];
 
 export const NOTIFICATION_TYPES = {

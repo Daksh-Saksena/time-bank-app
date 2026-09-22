@@ -181,7 +181,7 @@ export default function LoginScreen() {
           लॉगिन (Sign In)
         </h2>
         <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: 'var(--font-size-sm)', margin: 0, fontWeight: 500 }}>
-          Time Bank of India — Pure Seva Community
+          Time Bank of India: Pure Seva Community
         </p>
       </div>
 

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useApp } from '../../context/AppContext';
 import { ROLES, MAX_PREFERRED_CIRCLE } from '../../constants';
-import { UserPlus, UserMinus, Star, Search } from 'lucide-react';
+import { UserPlus, UserMinus, Star, Search, HeartHandshake } from 'lucide-react';
 
 export default function TrustedCircle({ forRole }) {
   const { currentUser, members, addToTrustedCircle, removeFromTrustedCircle, getTrustedCircle } = useApp();
@@ -67,7 +67,7 @@ export default function TrustedCircle({ forRole }) {
       <div className="page-header">
         <div className="page-header-inner">
           <div>
-            <h2 className="page-title">🙏 Trusted Circle</h2>
+            <h2 className="page-title">Trusted Circle</h2>
             <p className="page-subtitle">{circle.length} / {MAX_PREFERRED_CIRCLE} added</p>
           </div>
         </div>
@@ -87,7 +87,9 @@ export default function TrustedCircle({ forRole }) {
             <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>Loading…</p>
           ) : circle.length === 0 ? (
             <div className="empty-state" style={{ padding: 'var(--space-6) 0' }}>
-              <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>🤝</div>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+                <HeartHandshake size={36} color="var(--color-text-muted)" />
+              </div>
               <p style={{ fontSize: 'var(--font-size-sm)' }}>
                 No {isVolunteer ? 'seniors' : 'volunteers'} in your Trusted Circle yet.
                 <br />Add people you trust below.
@@ -98,24 +100,19 @@ export default function TrustedCircle({ forRole }) {
               {circle.map((member) => (
                 <div key={member.id} className="card" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <div className="avatar" style={{ background: isVolunteer ? 'var(--color-primary)' : '#27AE60' }}>
-                    {member.name?.[0] || '?'}
+                    {member.name?.[0] || 'U'}
                   </div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 700, marginBottom: 2 }}>{member.name}</div>
-                    <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span>{member.area || '-'}</span>
-                      {member.rating > 0 && (
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                          <Star size={10} color="#F39C12" fill="#F39C12" />
-                          {Number(member.rating).toFixed(1)}
-                        </span>
-                      )}
+                    <div style={{ fontWeight: 700, fontSize: 'var(--font-size-sm)' }}>{member.name}</div>
+                    <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
+                      {member.area || 'Local Area'}
                     </div>
                   </div>
                   <button
                     onClick={() => handleRemove(member)}
                     disabled={actionId === member.id}
-                    style={{ background: 'none', border: '1.5px solid var(--color-danger)', color: 'var(--color-danger)', borderRadius: 'var(--radius-md)', padding: '6px 12px', cursor: 'pointer', fontFamily: 'var(--font-family)', fontWeight: 600, fontSize: 'var(--font-size-xs)', display: 'flex', alignItems: 'center', gap: 4 }}
+                    className="btn btn-ghost btn-sm"
+                    style={{ color: 'var(--color-danger)', display: 'flex', alignItems: 'center', gap: 4 }}
                   >
                     <UserMinus size={14} /> Remove
                   </button>
@@ -125,34 +122,39 @@ export default function TrustedCircle({ forRole }) {
           )}
         </div>
 
-        {/* Add Members */}
+        {/* Add more members */}
         {circle.length < MAX_PREFERRED_CIRCLE && (
           <div>
-            <h4 style={{ marginBottom: 'var(--space-3)' }}>Add {isVolunteer ? 'Seniors' : 'Volunteers'}</h4>
+            <h4 style={{ marginBottom: 'var(--space-3)' }}>Add to Trusted Circle</h4>
             <div style={{ position: 'relative', marginBottom: 'var(--space-3)' }}>
               <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
               <input
+                type="text"
                 className="input"
-                style={{ paddingLeft: 36 }}
                 placeholder="Search by name…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                style={{ paddingLeft: 36, fontSize: 'var(--font-size-sm)' }}
               />
             </div>
+
             {availableToAdd.length === 0 ? (
-              <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', textAlign: 'center', padding: 'var(--space-4)' }}>
-                {searchQuery ? 'No results found.' : `No other ${targetRole}s in your area yet.`}
+              <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-xs)' }}>
+                {searchQuery ? 'No matching members found.' : 'All available members are in your circle.'}
               </p>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-                {availableToAdd.map((member) => (
-                  <div key={member.id} className="card" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div className="avatar" style={{ background: member.role === ROLES.VOLUNTEER ? '#27AE60' : 'var(--color-primary)', fontSize: 'var(--font-size-sm)' }}>
-                      {member.name?.[0] || '?'}
+                {availableToAdd.slice(0, 5).map((member) => (
+                  <div key={member.id} className="card" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 'var(--space-3)' }}>
+                    <div className="avatar avatar-sm" style={{ background: isVolunteer ? 'var(--color-primary)' : '#27AE60' }}>
+                      {member.name?.[0] || 'U'}
                     </div>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 600, marginBottom: 2, fontSize: 'var(--font-size-sm)' }}>{member.name}</div>
-                      <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>{member.area || '-'}</div>
+                      <div style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)' }}>{member.name}</div>
+                      <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
+                        {member.area || 'Local Area'}
+                        {member.rating && ` · ${member.rating.toFixed(1)} ★`}
+                      </div>
                     </div>
                     <button
                       onClick={() => handleAdd(member)}
@@ -169,7 +171,7 @@ export default function TrustedCircle({ forRole }) {
         )}
 
         <div style={{ marginTop: 'var(--space-5)', padding: 'var(--space-4)', background: 'var(--color-surface-alt)', borderRadius: 'var(--radius-md)', fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', lineHeight: 1.7 }}>
-          🙏 <strong>How it works:</strong> When you create a request, your Trusted Circle gets notified first. If no one responds in 15 minutes, the request is shared with all volunteers.
+          <strong>How it works:</strong> When you create a request, your Trusted Circle gets notified first. If no one responds in 15 minutes, the request is shared with all volunteers.
         </div>
       </div>
     </div>
