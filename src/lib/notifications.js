@@ -12,11 +12,18 @@ import { NOTIFICATION_TYPES, TRUSTED_NOTIFY_TIMEOUT_MINS } from '../constants';
 // ── Capacitor Push (mobile only) ──────────────────────────
 let PushNotifications = null;
 async function getCapacitorPush() {
-  if (!Capacitor.isNativePlatform()) return null;
-  if (PushNotifications) return PushNotifications;
   try {
+    if (typeof window === 'undefined') return null;
+    const isNative = typeof Capacitor !== 'undefined' &&
+      typeof Capacitor.isNativePlatform === 'function' &&
+      Capacitor.isNativePlatform();
+    if (!isNative) return null;
+    if (typeof Capacitor.isPluginAvailable === 'function' && !Capacitor.isPluginAvailable('PushNotifications')) {
+      return null;
+    }
+    if (PushNotifications) return PushNotifications;
     const cap = await import('@capacitor/push-notifications');
-    PushNotifications = cap.PushNotifications;
+    PushNotifications = cap?.PushNotifications || null;
     return PushNotifications;
   } catch {
     return null;
@@ -24,20 +31,32 @@ async function getCapacitorPush() {
 }
 
 export async function initPushNotifications(userId) {
-  if (!Capacitor.isNativePlatform()) {
-    // Web: register service worker for FCM / Web Push if available
-    await registerWebPush(userId);
-    return;
-  }
-  const Push = await getCapacitorPush();
-  if (!Push) return;
   try {
-    const perm = await Push.requestPermissions();
-    if (perm.receive !== 'granted') return;
-    await Push.register();
+    const isNative = typeof window !== 'undefined' &&
+      typeof Capacitor !== 'undefined' &&
+      typeof Capacitor.isNativePlatform === 'function' &&
+      Capacitor.isNativePlatform() &&
+      (typeof Capacitor.isPluginAvailable !== 'function' || Capacitor.isPluginAvailable('PushNotifications'));
+
+    if (!isNative) {
+      // Web: register service worker for FCM / Web Push if available
+      await registerWebPush(userId).catch(() => {});
+      return;
+    }
+    const Push = await getCapacitorPush();
+    if (!Push) return;
+
+    const perm = await Push.requestPermissions().catch(() => ({ receive: 'denied' }));
+    if (perm?.receive !== 'granted') return;
+    await Push.register().catch(() => {});
     Push.addListener('registration', async ({ value: token }) => {
       if (token && userId) {
-        await supabase.from('profiles').update({ push_token: token }).eq('id', userId);
+        const isUuid = (id) => typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+        if (isUuid(userId)) {
+          try {
+            await supabase.from('profiles').update({ push_token: token }).eq('id', userId);
+          } catch (e) {}
+        }
       }
     });
     Push.addListener('pushNotificationReceived', (notification) => {
@@ -47,34 +66,43 @@ export async function initPushNotifications(userId) {
       console.log('[Push] Action:', action);
     });
   } catch (err) {
-    console.warn('[Push] Capacitor push init failed:', err);
+    console.warn('[Push] Native push notifications not available:', err?.message || err);
   }
 }
 
 async function registerWebPush(userId) {
-  if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
   try {
-    const perm = await Notification.requestPermission();
-    if (perm !== 'granted' || !userId) return;
-    // Store web permission granted in profile
-    await supabase.from('profiles').update({ push_token: 'web-' + userId }).eq('id', userId);
+    if (typeof window === 'undefined' || !('Notification' in window) || !('serviceWorker' in navigator)) return;
+    if (Notification.permission !== 'granted' || !userId) return;
+    const isUuid = (id) => typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    if (isUuid(userId)) {
+      await supabase.from('profiles').update({ push_token: 'web-' + userId }).eq('id', userId);
+    }
   } catch (err) {
-    console.warn('[Push] Web push init:', err);
+    console.warn('[Push] Web push init note:', err?.message || err);
   }
 }
 
 // ── Store notification in DB (in-app bell) ────────────────
 export async function storeNotification({ userId, type, title, body, requestId }) {
   if (!userId) return;
-  const { error } = await supabase.from('notifications').insert([{
-    user_id: userId,
-    type,
-    title,
-    body,
-    request_id: requestId || null,
-    read: false,
-  }]);
-  if (error) console.warn('[Notification] Store error:', error);
+  const isUuid = (id) => typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+  const validUserId = isUuid(userId) ? userId : null;
+  const validRequestId = isUuid(requestId) ? requestId : null;
+  if (!validUserId) return;
+  try {
+    const { error } = await supabase.from('notifications').insert([{
+      user_id: validUserId,
+      type,
+      title,
+      body,
+      request_id: validRequestId,
+      read: false,
+    }]);
+    if (error) console.warn('[Notification] Store note:', error.message);
+  } catch (e) {
+    console.warn('[Notification] Store exception:', e?.message);
+  }
 }
 
 // ── Browser native notification (web fallback) ────────────
@@ -107,69 +135,111 @@ export async function fetchNotifications(userId) {
 }
 
 // ── Notify trusted circle volunteers for a new request ───
-export async function notifyTrustedVolunteers({ requestId, seniorId, serviceType, seniorName, location }) {
-  // Fetch senior's preferred volunteers
-  const { data: prefs } = await supabase
-    .from('preferences')
-    .select('target_user_id')
-    .eq('user_id', seniorId)
-    .eq('relationship', 'trusted');
+export async function notifyTrustedVolunteers({ requestId, seniorId, serviceType, seniorName, location, pincode }) {
+  let volunteerIds = [];
+  const isUuid = (id) => typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 
-  if (!prefs || prefs.length === 0) {
+  // Check localStorage for trusted circle first
+  try {
+    const local = localStorage.getItem('tb_trusted_' + seniorId);
+    if (local) {
+      const parsed = JSON.parse(local);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        volunteerIds = parsed.map((v) => (typeof v === 'object' && v ? v.id : v)).filter(Boolean);
+      }
+    }
+  } catch (e) {}
+
+  // If none found locally, try fetching from Supabase preferences
+  if (volunteerIds.length === 0 && isUuid(seniorId)) {
+    try {
+      const { data: prefs, error } = await supabase
+        .from('preferences')
+        .select('target_user_id')
+        .eq('user_id', seniorId)
+        .eq('relationship', 'trusted');
+      if (!error && prefs && prefs.length > 0) {
+        volunteerIds = prefs.map((p) => p.target_user_id).filter(Boolean);
+      }
+    } catch (e) {
+      console.warn('[notifyTrustedVolunteers] preferences lookup note:', e?.message);
+    }
+  }
+
+  if (!volunteerIds || volunteerIds.length === 0) {
     // No trusted circle — broadcast immediately
-    await broadcastToNearbyVolunteers({ requestId, serviceType, seniorName, location });
+    await broadcastToNearbyVolunteers({ requestId, serviceType, seniorName, location, pincode });
     return;
   }
 
-  const volunteerIds = prefs.map(p => p.target_user_id);
-
   // Fetch volunteer profiles (check availability)
-  const { data: volunteers } = await supabase
-    .from('profiles')
-    .select('id, name, volunteer_status')
-    .in('id', volunteerIds)
-    .eq('role', 'volunteer')
-    .neq('volunteer_status', 'dnd');
+  try {
+    const validVolIds = volunteerIds.filter(isUuid);
+    if (validVolIds.length > 0) {
+      const { data: volunteers } = await supabase
+        .from('profiles')
+        .select('id, name, volunteer_status')
+        .in('id', validVolIds)
+        .eq('role', 'volunteer')
+        .neq('volunteer_status', 'dnd');
 
-  for (const v of (volunteers || [])) {
-    await storeNotification({
-      userId: v.id,
-      type: NOTIFICATION_TYPES.NEW_REQUEST,
-      title: `🙏 New Request from ${seniorName}`,
-      body: `${serviceType} help needed at ${location}. Please accept or decline.`,
-      requestId,
-    });
-    showBrowserNotification(`New Request — ${seniorName}`, `${serviceType} help needed. Tap to view.`);
+      for (const v of (volunteers || [])) {
+        await storeNotification({
+          userId: v.id,
+          type: NOTIFICATION_TYPES.NEW_REQUEST,
+          title: `🙏 New Request from ${seniorName}`,
+          body: `${serviceType} help needed at ${location}. Please accept or decline.`,
+          requestId,
+        });
+        showBrowserNotification(`New Request — ${seniorName}`, `${serviceType} help needed. Tap to view.`);
+      }
+    }
+  } catch (e) {
+    console.warn('[notifyTrustedVolunteers] notify volunteers error:', e?.message);
   }
 
   // Update request lifecycle
-  await supabase.from('requests').update({
-    lifecycle_status: 'notified_trusted',
-    notified_at: new Date().toISOString(),
-  }).eq('id', requestId);
-
-  // Schedule broadcast after TRUSTED_NOTIFY_TIMEOUT_MINS (stored as a flag; polling handled by client)
-  // We store the notified_at timestamp; the volunteer home polls and triggers broadcast if needed
+  if (isUuid(requestId)) {
+    try {
+      await supabase.from('requests').update({
+        lifecycle_status: 'notified_trusted',
+        notified_at: new Date().toISOString(),
+      }).eq('id', requestId);
+    } catch (e) {}
+  }
 }
 
 // ── Broadcast to ALL available volunteers in pincode ─────
 export async function broadcastToNearbyVolunteers({ requestId, serviceType, seniorName, location, pincode }) {
-  const { data: volunteers } = await supabase
-    .from('profiles')
-    .select('id, name')
-    .eq('role', 'volunteer')
-    .eq('pincode', pincode)
-    .neq('volunteer_status', 'dnd')
-    .eq('kyc_status', 'verified');
+  try {
+    let query = supabase
+      .from('profiles')
+      .select('id, name')
+      .eq('role', 'volunteer')
+      .neq('volunteer_status', 'dnd')
+      .eq('kyc_status', 'verified');
 
-  for (const v of (volunteers || [])) {
-    await storeNotification({
-      userId: v.id,
-      type: NOTIFICATION_TYPES.NEW_REQUEST,
-      title: `🆘 Help Needed: ${seniorName}`,
-      body: `${serviceType} request at ${location}. Be the first to accept!`,
-      requestId,
-    });
+    if (pincode) {
+      query = query.eq('pincode', pincode);
+    }
+
+    const { data: volunteers, error } = await query;
+    if (error) {
+      console.warn('[broadcastToNearbyVolunteers] Query note:', error.message);
+      return;
+    }
+
+    for (const v of (volunteers || [])) {
+      await storeNotification({
+        userId: v.id,
+        type: NOTIFICATION_TYPES.NEW_REQUEST,
+        title: `🆘 Help Needed: ${seniorName}`,
+        body: `${serviceType} request at ${location}. Be the first to accept!`,
+        requestId,
+      });
+    }
+  } catch (e) {
+    console.warn('[broadcastToNearbyVolunteers] Exception:', e?.message);
   }
 }
 

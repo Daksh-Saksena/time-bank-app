@@ -237,7 +237,7 @@ export function AppProvider({ children }) {
         fetchProfile(session.user.id);
         fetchUserLedger(session.user.id);
         fetchUserNotifications(session.user.id);
-        initPushNotifications(session.user.id);
+        initPushNotifications(session.user.id).catch(() => {});
       }
       setLoading(false);
     });
@@ -249,7 +249,7 @@ export function AppProvider({ children }) {
         fetchProfile(session.user.id);
         fetchUserLedger(session.user.id);
         fetchUserNotifications(session.user.id);
-        initPushNotifications(session.user.id);
+        initPushNotifications(session.user.id).catch(() => {});
       } else if (event === 'SIGNED_OUT') {
         try { localStorage.removeItem('tb_user'); } catch (e) {}
         setCurrentUser(null);
@@ -299,7 +299,7 @@ export function AppProvider({ children }) {
       } catch (e) {}
       fetchUserLedger(user.id);
       fetchUserNotifications(user.id);
-      initPushNotifications(user.id);
+      initPushNotifications(user.id).catch(() => {});
     }
   }, [fetchUserLedger, fetchUserNotifications]);
 
@@ -408,6 +408,7 @@ export function AppProvider({ children }) {
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 
     const validSeniorId = isUuid(seniorId) ? seniorId : null;
+    const validAdminId = isUuid(requestData.createdByAdminId) ? requestData.createdByAdminId : null;
 
     // ── Recurring logic ──────────────────────────────────────
     if (requestData.isRecurring && requestData.recurrencePattern) {
@@ -428,7 +429,7 @@ export function AppProvider({ children }) {
       urgency: requestData.urgency || 'normal',
       status: initialStatus,
       lifecycle_status: initialLifecycle,
-      created_by_admin_id: requestData.createdByAdminId || null,
+      created_by_admin_id: validAdminId,
       created_by_admin_name: requestData.createdByAdminName || null,
     };
 
@@ -436,19 +437,22 @@ export function AppProvider({ children }) {
     try {
       const { data, error } = await supabase.from('requests').insert([payload]).select().single();
       if (error) {
-        if (error.code === '23503') {
-          console.warn('[createRequest] Foreign key note: senior_id not in profiles, inserting with null reference');
-          const fallbackPayload = { ...payload, senior_id: null };
-          const { data: fbData } = await supabase.from('requests').insert([fallbackPayload]).select().single();
-          inserted = fbData;
+        // If foreign key constraint failed (status 409 or code 23503), retry without foreign key references
+        if (error.code === '23503' || error.status === 409 || error.message?.includes('foreign key') || error.message?.includes('violates')) {
+          console.warn('[createRequest] Foreign key conflict in profiles, inserting with decoupled references');
+          const fallbackPayload = { ...payload, senior_id: null, created_by_admin_id: null };
+          const { data: fbData, error: fbErr } = await supabase.from('requests').insert([fallbackPayload]).select().single();
+          if (!fbErr && fbData) {
+            inserted = fbData;
+          }
         } else {
-          console.warn('[createRequest] error:', error.message);
+          console.warn('[createRequest] note:', error.message);
         }
       } else {
         inserted = data;
       }
     } catch (e) {
-      console.warn('[createRequest] exception:', e.message);
+      console.warn('[createRequest] exception:', e?.message);
     }
 
     const formatted = {
@@ -517,21 +521,33 @@ export function AppProvider({ children }) {
 
   // ── Create Recurring Series ───────────────────────────────
   const createRecurringSeries = useCallback(async (requestData, seniorId) => {
+    const isUuid = (id) =>
+      typeof id === 'string' &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
+    const validSeniorId = isUuid(seniorId) ? seniorId : null;
     const { recurrencePattern } = requestData;
     const { days, time, fromDate, toDate } = recurrencePattern;
 
-    // Create series record
-    const { data: series } = await supabase.from('request_series').insert([{
-      created_by: seniorId,
-      service_type: requestData.serviceType,
-      description: requestData.description,
-      location: requestData.location,
-      pincode: requestData.pincode || currentUser?.pincode,
-      urgency: requestData.urgency,
-      pattern: recurrencePattern,
-    }]).select().single();
+    let seriesId = crypto.randomUUID();
+    try {
+      // Create series record
+      const { data: series, error } = await supabase.from('request_series').insert([{
+        created_by: validSeniorId,
+        service_type: requestData.serviceType,
+        description: requestData.description,
+        location: requestData.location,
+        pincode: requestData.pincode || currentUser?.pincode,
+        urgency: requestData.urgency,
+        pattern: recurrencePattern,
+      }]).select().single();
 
-    const seriesId = series?.id || crypto.randomUUID();
+      if (!error && series?.id) {
+        seriesId = series.id;
+      }
+    } catch (e) {
+      console.warn('[createRecurringSeries] Series note:', e?.message);
+    }
 
     // Generate all dates in the range matching the selected days
     const dayMap = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
@@ -547,7 +563,7 @@ export function AppProvider({ children }) {
         const scheduledTime = new Date(current);
         scheduledTime.setHours(hours, minutes, 0, 0);
         instances.push({
-          senior_id: seniorId,
+          senior_id: validSeniorId,
           senior_name: currentUser?.name || 'Anonymous Senior',
           service_type: requestData.serviceType,
           description: `${requestData.description} (Recurring - ${dayName})`,
@@ -559,14 +575,25 @@ export function AppProvider({ children }) {
           is_recurring: true,
           recurrence_pattern: recurrencePattern,
           series_id: seriesId,
-          // Store scheduled time in description for now
         });
       }
       current.setDate(current.getDate() + 1);
     }
 
     if (instances.length > 0) {
-      const { data: inserted } = await supabase.from('requests').insert(instances).select();
+      let inserted = null;
+      try {
+        const { data, error } = await supabase.from('requests').insert(instances).select();
+        if (error && (error.code === '23503' || error.status === 409)) {
+          const fallbackInstances = instances.map((inst) => ({ ...inst, senior_id: null, series_id: null }));
+          const { data: fbData } = await supabase.from('requests').insert(fallbackInstances).select();
+          inserted = fbData;
+        } else {
+          inserted = data;
+        }
+      } catch (e) {
+        console.warn('[createRecurringSeries] insert note:', e?.message);
+      }
       if (inserted) {
         const formatted = inserted.map((r) => ({
           id: r.id,
@@ -917,40 +944,110 @@ export function AppProvider({ children }) {
   }, []);
 
   // ── Preferred Circle ──────────────────────────────────────
-  const addToTrustedCircle = useCallback(async (targetUserId) => {
+  const addToTrustedCircle = useCallback(async (targetMemberOrId) => {
     if (!currentUser?.id) return;
-    await supabase.from('preferences').upsert([{
-      user_id: currentUser.id,
-      target_user_id: targetUserId,
-      relationship: 'trusted',
-    }]);
-  }, [currentUser]);
+    const targetId = typeof targetMemberOrId === 'object' && targetMemberOrId ? targetMemberOrId.id : targetMemberOrId;
+    const targetObj = typeof targetMemberOrId === 'object' && targetMemberOrId
+      ? targetMemberOrId
+      : members.find((m) => m.id === targetId) || { id: targetId, name: 'Member', role: 'volunteer' };
+
+    // 1. Immediately persist to localStorage for zero-latency UI
+    try {
+      const key = `tb_trusted_${currentUser.id}`;
+      const stored = JSON.parse(localStorage.getItem(key) || '[]');
+      const exists = stored.some((item) => (typeof item === 'object' ? item.id === targetId : item === targetId));
+      if (!exists) {
+        const updated = [...stored, targetObj];
+        localStorage.setItem(key, JSON.stringify(updated));
+      }
+    } catch (e) {}
+
+    // 2. Safely sync to Supabase if valid UUID
+    const isUuid = (id) => typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    if (isUuid(currentUser.id) && isUuid(targetId)) {
+      try {
+        await supabase.from('preferences').upsert([{
+          user_id: currentUser.id,
+          target_user_id: targetId,
+          relationship: 'trusted',
+        }]);
+      } catch (e) {
+        console.warn('[addToTrustedCircle] Supabase sync skipped:', e?.message);
+      }
+    }
+  }, [currentUser?.id, members]);
 
   const removeFromTrustedCircle = useCallback(async (targetUserId) => {
     if (!currentUser?.id) return;
-    await supabase.from('preferences').delete()
-      .eq('user_id', currentUser.id)
-      .eq('target_user_id', targetUserId);
-  }, [currentUser]);
+    // 1. Immediately update localStorage
+    try {
+      const key = `tb_trusted_${currentUser.id}`;
+      const stored = JSON.parse(localStorage.getItem(key) || '[]');
+      const filtered = stored.filter((item) => (typeof item === 'object' ? item.id !== targetUserId : item !== targetUserId));
+      localStorage.setItem(key, JSON.stringify(filtered));
+    } catch (e) {}
+
+    // 2. Safely delete from Supabase if valid UUID
+    const isUuid = (id) => typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    if (isUuid(currentUser.id) && isUuid(targetUserId)) {
+      try {
+        await supabase.from('preferences').delete()
+          .eq('user_id', currentUser.id)
+          .eq('target_user_id', targetUserId);
+      } catch (e) {
+        console.warn('[removeFromTrustedCircle] Supabase delete note:', e?.message);
+      }
+    }
+  }, [currentUser?.id]);
 
   const getTrustedCircle = useCallback(async () => {
     if (!currentUser?.id) return [];
+    const isUuid = (id) => typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
+    // Read local cache first
+    let localCircle = [];
     try {
-      const { data, error } = await supabase
-        .from('preferences')
-        .select('target_user_id, profiles!preferences_target_user_id_fkey(id, name, role, area)')
-        .eq('user_id', currentUser.id)
-        .eq('relationship', 'trusted');
-      if (error) {
-        console.warn('[getTrustedCircle] query warning:', error.message);
-        return [];
+      const stored = localStorage.getItem(`tb_trusted_${currentUser.id}`);
+      if (stored) {
+        localCircle = JSON.parse(stored);
       }
-      return (data || []).map((p) => p.profiles).filter(Boolean);
-    } catch (e) {
-      console.warn('[getTrustedCircle] exception:', e);
-      return [];
+    } catch (e) {}
+
+    // If currentUser.id is a valid UUID, attempt to sync with Supabase preferences
+    if (isUuid(currentUser.id)) {
+      try {
+        const { data, error } = await supabase
+          .from('preferences')
+          .select('target_user_id')
+          .eq('user_id', currentUser.id)
+          .eq('relationship', 'trusted');
+
+        if (!error && data && data.length > 0) {
+          const targetIds = new Set(data.map((p) => p.target_user_id));
+          const resolved = members.filter((m) => targetIds.has(m.id));
+          if (resolved.length > 0) {
+            try {
+              localStorage.setItem(`tb_trusted_${currentUser.id}`, JSON.stringify(resolved));
+            } catch (e) {}
+            return resolved;
+          }
+        }
+      } catch (err) {
+        // Fall back gracefully to localCircle
+      }
     }
-  }, [currentUser]);
+
+    // Return locally stored circle or find matching members
+    if (Array.isArray(localCircle) && localCircle.length > 0) {
+      const resolvedLocal = localCircle.map((item) => {
+        if (typeof item === 'object' && item?.id) return item;
+        return members.find((m) => m.id === item);
+      }).filter(Boolean);
+      return resolvedLocal;
+    }
+
+    return [];
+  }, [currentUser?.id, members]);
 
   // ── Volunteer Status ──────────────────────────────────────
   const updateVolunteerStatus = useCallback(async (status) => {

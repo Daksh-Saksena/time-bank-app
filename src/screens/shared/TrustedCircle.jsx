@@ -48,7 +48,7 @@ export default function TrustedCircle({ forRole }) {
       return;
     }
     setActionId(member.id);
-    await addToTrustedCircle(member.id);
+    await addToTrustedCircle(member);
     setCircle((prev) => [...prev, member]);
     showToast(`${member.name} added to your Trusted Circle!`);
     setActionId(null);
