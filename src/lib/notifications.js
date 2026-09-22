@@ -5,12 +5,14 @@
  *  - Sending browser Notification API alerts
  *  - Sending Capacitor push notifications (mobile)
  */
+import { Capacitor } from '@capacitor/core';
 import { supabase } from './supabase';
 import { NOTIFICATION_TYPES, TRUSTED_NOTIFY_TIMEOUT_MINS } from '../constants';
 
 // ── Capacitor Push (mobile only) ──────────────────────────
 let PushNotifications = null;
 async function getCapacitorPush() {
+  if (!Capacitor.isNativePlatform()) return null;
   if (PushNotifications) return PushNotifications;
   try {
     const cap = await import('@capacitor/push-notifications');
@@ -22,12 +24,13 @@ async function getCapacitorPush() {
 }
 
 export async function initPushNotifications(userId) {
-  const Push = await getCapacitorPush();
-  if (!Push) {
-    // Web: register service worker for FCM if VAPID key available
+  if (!Capacitor.isNativePlatform()) {
+    // Web: register service worker for FCM / Web Push if available
     await registerWebPush(userId);
     return;
   }
+  const Push = await getCapacitorPush();
+  if (!Push) return;
   try {
     const perm = await Push.requestPermissions();
     if (perm.receive !== 'granted') return;

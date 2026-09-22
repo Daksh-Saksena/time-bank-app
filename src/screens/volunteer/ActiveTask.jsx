@@ -186,39 +186,46 @@ export default function ActiveTask() {
         </div>
         {isActive && (
           <div style={{ textAlign: 'center', background: 'white', borderRadius: 'var(--radius-xl)', padding: 'var(--space-8)', marginBottom: 'var(--space-4)', border: '2px solid var(--color-primary)' }}>
-            <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-2)' }}>Session Time</p>
+            <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-2)' }}>सत्र समय (Session Time)</p>
             <ElapsedTimer startTime={activeSession.startTime} />
             <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', marginTop: 'var(--space-2)' }}>
-              Time credits are calculated from session start to end.
+              सेवा समय सत्र शुरू होने से समाप्त होने तक दर्ज किया जाता है। (Pure Seva Model)
             </p>
           </div>
         )}
         <div className="alert alert-info" style={{ marginBottom: 'var(--space-5)' }}>
-          Verification required at start and end of each session. This protects both the senior and volunteer.
+          🔒 सुरक्षा सत्यापन: सत्र शुरू और समाप्त करते समय 4-अंकीय PIN या QR कोड स्कैन अनिवार्य है।
         </div>
         {!isActive ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
             <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', textAlign: 'center' }}>
-              Arrived at {req.seniorName}'s location? Start the session.
+              वरिष्ठ नागरिक {req.seniorName} के स्थान पर पहुँचकर सेवा सत्र शुरू करें।
             </p>
-            <button className="btn btn-success btn-full btn-lg" onClick={initiateStart}>
-              Start Session
+            <button
+              className="btn btn-outline btn-full btn-lg"
+              onClick={() => setVideoCallOpen(true)}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, borderColor: '#2563EB', color: '#2563EB', fontWeight: 700 }}
+            >
+              <Video size={20} /> 📹 Video Assistance (Daily.co)
+            </button>
+            <button className="btn btn-success btn-full btn-lg" onClick={initiateStart} style={{ fontWeight: 800 }}>
+              ▶ Start Session (सत्र शुरू करें)
             </button>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
             <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', textAlign: 'center' }}>
-              Task completed? End session to credit your time.
+              सेवा कार्य पूरा हो गया? सत्र समाप्त कर अपना सेवा योगदान दर्ज करें।
             </p>
             <button
-              className="btn btn-outline btn-full"
+              className="btn btn-outline btn-full btn-lg"
               onClick={() => setVideoCallOpen(true)}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, borderColor: '#2563EB', color: '#2563EB', fontWeight: 700 }}
             >
-              <Video size={18} /> 📹 Video Help
+              <Video size={20} /> 📹 Video Assistance (Daily.co)
             </button>
-            <button className="btn btn-danger btn-full btn-lg" onClick={initiateEnd}>
-              ■ End Session & Claim Time
+            <button className="btn btn-danger btn-full btn-lg" onClick={initiateEnd} style={{ fontWeight: 800 }}>
+              ■ End Session & Record Seva (सत्र समाप्त करें)
             </button>
           </div>
         )}
@@ -226,7 +233,7 @@ export default function ActiveTask() {
           isOpen={videoCallOpen}
           onClose={() => setVideoCallOpen(false)}
           requestId={req?.id}
-          title={`Video Help — ${req?.seniorName}`}
+          title={`Video Assistance — ${req?.seniorName}`}
         />
         {/* Verification method modal */}
         <Modal isOpen={verifyModal === 'verify'} onClose={() => setVerifyModal(null)} title="Choose Verification Method">

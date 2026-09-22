@@ -9,6 +9,8 @@ import {
   TRUSTED_NOTIFY_TIMEOUT_MINS,
   LOW_RATING_THRESHOLD,
   LOW_RATING_WINDOW,
+  normalizeRole,
+  canPerformSevaAction,
 } from '../constants';
 import { supabase } from '../lib/supabase';
 import {
@@ -23,6 +25,7 @@ import {
   markNotificationsRead,
   initPushNotifications,
 } from '../lib/notifications';
+import { SEED_MEMBERS, SEED_REQUESTS, SEED_RATINGS } from '../lib/seedData';
 
 const AppContext = createContext(null);
 
@@ -48,11 +51,13 @@ export function AppProvider({ children }) {
   const [isLoggedIn, setIsLoggedIn] = useState(!!cachedUser);
   const [onboardingStep, setOnboardingStep] = useState(0);
   const [seniorMode, setSeniorMode] = useState(cachedUser?.senior_mode || false);
-  const [requests, setRequests] = useState([]);
+  const [requests, setRequests] = useState(SEED_REQUESTS);
   const [ledger, setLedger] = useState({});
-  const [pendingApprovals, setPendingApprovals] = useState([]);
-  const [ratings, setRatings] = useState([]);
-  const [members, setMembers] = useState([]);
+  const [pendingApprovals, setPendingApprovals] = useState(
+    SEED_MEMBERS.filter((m) => m.kyc_status === KYC_STATUS.PENDING)
+  );
+  const [ratings, setRatings] = useState(SEED_RATINGS);
+  const [members, setMembers] = useState(SEED_MEMBERS);
   const [activeSession, setActiveSession] = useState(null);
   const [sosVisible, setSosVisible] = useState(false);
   const [pendingRating, setPendingRating] = useState(null);
@@ -98,8 +103,8 @@ export function AppProvider({ children }) {
         .select('*')
         .order('created_at', { ascending: false });
       if (error) {
-        console.error('[fetchRequests] error:', error);
-      } else if (data) {
+        console.warn('[fetchRequests] using cached/seed state:', error.message);
+      } else if (data && data.length > 0) {
         const mapped = data.map((r) => ({
           id: r.id,
           seniorId: r.senior_id,
@@ -123,8 +128,15 @@ export function AppProvider({ children }) {
           createdByAdminId: r.created_by_admin_id,
           createdByAdminName: r.created_by_admin_name,
           notifiedAt: r.notified_at,
+          scheduledDate: r.scheduled_date,
+          scheduledTime: r.scheduled_time,
+          estimatedDuration: r.estimated_duration,
         }));
-        setRequests(mapped);
+        setRequests((prev) => {
+          const remoteIds = new Set(mapped.map((m) => m.id));
+          const nonDupes = prev.filter((p) => !remoteIds.has(p.id));
+          return [...mapped, ...nonDupes];
+        });
 
         // Check for any requests in 'notified_trusted' status that have passed timeout
         mapped.forEach((r) => {
@@ -144,7 +156,7 @@ export function AppProvider({ children }) {
         });
       }
     } catch (err) {
-      console.error('[fetchRequests] exception:', err);
+      console.warn('[fetchRequests] note:', err.message);
     }
   }, []);
 
@@ -156,13 +168,18 @@ export function AppProvider({ children }) {
         .select('*')
         .order('created_at', { ascending: false });
       if (error) {
-        console.error('Error fetching members:', error);
-      } else if (data) {
-        setMembers(data);
-        setPendingApprovals(data.filter((m) => m.kyc_status === KYC_STATUS.PENDING));
+        console.warn('Note fetching members:', error.message);
+      } else if (data && data.length > 0) {
+        setMembers((prev) => {
+          const remoteIds = new Set(data.map((d) => d.id));
+          const nonDupes = prev.filter((p) => !remoteIds.has(p.id));
+          const merged = [...data, ...nonDupes];
+          setPendingApprovals(merged.filter((m) => m.kyc_status === KYC_STATUS.PENDING));
+          return merged;
+        });
       }
     } catch (err) {
-      console.error('Error in fetchMembers:', err);
+      console.warn('fetchMembers note:', err.message);
     }
   }, []);
 
@@ -334,38 +351,83 @@ export function AppProvider({ children }) {
     }
   }, [seniorMode, currentUser]);
 
+  // ── Set / Update User 4-Digit Quick PIN ────────────────────
+  const setUserPin = useCallback(async (pin) => {
+    if (!currentUser?.id) return;
+    const cleanPin = String(pin).replace(/\D/g, '').slice(0, 4);
+    if (cleanPin.length !== 4) throw new Error('PIN must be exactly 4 digits');
+
+    await supabase.from('profiles').update({ pin: cleanPin }).eq('id', currentUser.id);
+    setCurrentUser((prev) => prev ? { ...prev, pin: cleanPin } : prev);
+    try {
+      const stored = JSON.parse(localStorage.getItem('tb_user') || '{}');
+      localStorage.setItem('tb_user', JSON.stringify({ ...stored, pin: cleanPin }));
+    } catch (e) {}
+  }, [currentUser]);
+
+  // ── Login with Quick PIN for Returning Users ──────────────
+  const loginWithPin = useCallback(async (phone, pin) => {
+    const cleanDigits = String(phone).replace(/\D/g, '');
+    const clean10 = cleanDigits.length === 12 && cleanDigits.startsWith('91') ? cleanDigits.slice(2) : cleanDigits;
+    const fullPhone = `+91${clean10}`;
+    const cleanPin = String(pin).replace(/\D/g, '').slice(0, 4);
+
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('phone', fullPhone)
+      .eq('pin', cleanPin)
+      .maybeSingle();
+
+    if (error || !profile) {
+      throw new Error('Incorrect 4-digit PIN or phone number not found.');
+    }
+
+    login(profile);
+    return profile;
+  }, [login]);
+
   // ── Create Request (one-time or recurring) ────────────────
   const createRequest = useCallback(async (requestData) => {
-    // Check max active requests
-    const myActive = requests.filter(
-      (r) => r.seniorId === currentUser?.id && [REQUEST_STATUS.OPEN, REQUEST_STATUS.ACCEPTED, REQUEST_STATUS.IN_PROGRESS].includes(r.status)
-    );
-    if (myActive.length >= MAX_ACTIVE_REQUESTS) {
-      throw new Error(`You can only have ${MAX_ACTIVE_REQUESTS} active requests at a time.`);
+    const seniorId = requestData.seniorId || currentUser?.id;
+    const seniorName = requestData.seniorName || currentUser?.name || 'Anonymous Senior';
+    const isAdminCreation = Boolean(requestData.createdByAdminId);
+
+    // Only enforce active request limit for non-admin creation
+    if (!isAdminCreation) {
+      const myActive = requests.filter(
+        (r) => r.seniorId === seniorId && [REQUEST_STATUS.OPEN, REQUEST_STATUS.ACCEPTED, REQUEST_STATUS.IN_PROGRESS].includes(r.status)
+      );
+      if (myActive.length >= MAX_ACTIVE_REQUESTS) {
+        throw new Error(`You can only have ${MAX_ACTIVE_REQUESTS} active requests at a time.`);
+      }
     }
 
     const isUuid = (id) =>
       typeof id === 'string' &&
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 
-    const validSeniorId = isUuid(currentUser?.id) ? currentUser.id : null;
+    const validSeniorId = isUuid(seniorId) ? seniorId : null;
 
     // ── Recurring logic ──────────────────────────────────────
     if (requestData.isRecurring && requestData.recurrencePattern) {
       return await createRecurringSeries(requestData, validSeniorId);
     }
 
+    const initialStatus = requestData.sendToTrustedFirst ? REQUEST_STATUS.NOTIFIED_TRUSTED : REQUEST_STATUS.OPEN;
+    const initialLifecycle = requestData.sendToTrustedFirst ? 'notified_trusted' : 'created';
+
     // ── One-time request ──────────────────────────────────────
     const payload = {
       senior_id: validSeniorId,
-      senior_name: currentUser?.name || 'Anonymous Senior',
+      senior_name: seniorName,
       service_type: requestData.serviceType,
       description: requestData.description,
       location: requestData.location || currentUser?.area || 'Local Area',
       pincode: requestData.pincode || currentUser?.pincode || '400001',
       urgency: requestData.urgency || 'normal',
-      status: REQUEST_STATUS.OPEN,
-      lifecycle_status: 'created',
+      status: initialStatus,
+      lifecycle_status: initialLifecycle,
       created_by_admin_id: requestData.createdByAdminId || null,
       created_by_admin_name: requestData.createdByAdminName || null,
     };
@@ -373,23 +435,36 @@ export function AppProvider({ children }) {
     let inserted = null;
     try {
       const { data, error } = await supabase.from('requests').insert([payload]).select().single();
-      if (error) console.error('[createRequest] error:', error);
-      else inserted = data;
+      if (error) {
+        if (error.code === '23503') {
+          console.warn('[createRequest] Foreign key note: senior_id not in profiles, inserting with null reference');
+          const fallbackPayload = { ...payload, senior_id: null };
+          const { data: fbData } = await supabase.from('requests').insert([fallbackPayload]).select().single();
+          inserted = fbData;
+        } else {
+          console.warn('[createRequest] error:', error.message);
+        }
+      } else {
+        inserted = data;
+      }
     } catch (e) {
-      console.error('[createRequest] exception:', e);
+      console.warn('[createRequest] exception:', e.message);
     }
 
     const formatted = {
       id: inserted?.id || `req-${Date.now()}`,
-      seniorId: validSeniorId,
-      seniorName: currentUser?.name || 'Anonymous Senior',
+      seniorId: seniorId,
+      seniorName: seniorName,
       serviceType: requestData.serviceType,
       description: requestData.description,
       location: requestData.location || currentUser?.area || 'Local Area',
       pincode: requestData.pincode || currentUser?.pincode || '400001',
       urgency: requestData.urgency || 'normal',
-      status: REQUEST_STATUS.OPEN,
-      lifecycleStatus: 'created',
+      status: initialStatus,
+      lifecycleStatus: initialLifecycle,
+      scheduledDate: requestData.scheduledDate || 'Today',
+      scheduledTime: requestData.scheduledTime || '',
+      estimatedDuration: requestData.estimatedDuration || 30,
       createdAt: inserted?.created_at || new Date().toISOString(),
       createdByAdminId: requestData.createdByAdminId,
       createdByAdminName: requestData.createdByAdminName,
@@ -398,13 +473,42 @@ export function AppProvider({ children }) {
     setRequests((prev) => [formatted, ...prev]);
 
     // Trigger notifications
-    if (inserted?.id && validSeniorId) {
-      notifyTrustedVolunteers({
-        requestId: inserted.id,
-        seniorId: validSeniorId,
+    if (initialStatus === REQUEST_STATUS.NOTIFIED_TRUSTED) {
+      await notifyTrustedVolunteers({
+        requestId: formatted.id,
+        seniorId: seniorId,
         serviceType: requestData.serviceType,
-        seniorName: currentUser?.name,
-        location: requestData.location,
+        seniorName: seniorName,
+        location: formatted.location,
+        pincode: formatted.pincode,
+      });
+
+      // 15-minute fallback broadcast if still in notified_trusted
+      setTimeout(() => {
+        setRequests((current) => {
+          const existing = current.find((r) => r.id === formatted.id);
+          if (existing && existing.status === REQUEST_STATUS.NOTIFIED_TRUSTED) {
+            broadcastToNearbyVolunteers({
+              requestId: formatted.id,
+              serviceType: formatted.serviceType,
+              seniorName: formatted.seniorName,
+              location: formatted.location,
+              pincode: formatted.pincode,
+            });
+            return current.map((r) =>
+              r.id === formatted.id ? { ...r, status: REQUEST_STATUS.OPEN, lifecycleStatus: 'created' } : r
+            );
+          }
+          return current;
+        });
+      }, TRUSTED_NOTIFY_TIMEOUT_MINS * 60 * 1000);
+    } else {
+      await broadcastToNearbyVolunteers({
+        requestId: formatted.id,
+        serviceType: requestData.serviceType,
+        seniorName: seniorName,
+        location: formatted.location,
+        pincode: formatted.pincode,
       });
     }
 
@@ -488,6 +592,11 @@ export function AppProvider({ children }) {
 
   // ── Accept Request ────────────────────────────────────────
   const acceptRequest = useCallback(async (requestId) => {
+    if (!canPerformSevaAction(currentUser, 'accept_task')) {
+      alert('Identity Verification Pending: Your KYC is currently under review by your Pincode Admin. You will be able to accept requests once verified.');
+      return;
+    }
+
     const req = requests.find((r) => r.id === requestId);
     await supabase.from('requests').update({
       status: REQUEST_STATUS.ACCEPTED,
@@ -515,6 +624,11 @@ export function AppProvider({ children }) {
 
   // ── Start Session ─────────────────────────────────────────
   const startSession = useCallback(async (requestId) => {
+    if (!canPerformSevaAction(currentUser, 'start_task')) {
+      alert('Identity verification required before starting a task session.');
+      return;
+    }
+
     const startTime = new Date();
     setActiveSession({ requestId, startTime, elapsed: 0 });
 
@@ -538,7 +652,7 @@ export function AppProvider({ children }) {
     }
   }, [requests, currentUser]);
 
-  // ── End Session ───────────────────────────────────────────
+  // ── End Session (Pure Seva Model: logs seva contribution) ──
   const endSession = useCallback(async (requestId) => {
     if (!activeSession) return;
     const endTime = new Date();
@@ -561,21 +675,29 @@ export function AppProvider({ children }) {
     const req = requests.find((r) => r.id === requestId);
 
     if (req && currentUser) {
-      const newBalance = (currentUser.time_balance || 0) + durationMinutes;
+      // Pure Seva: record volunteer's seva contribution without deducting anything from senior
+      const currentSeva = (currentUser.total_seva_minutes ?? currentUser.time_balance ?? currentUser.timeBalance ?? 0);
+      const newTotalSevaMinutes = currentSeva + durationMinutes;
 
       await supabase.from('ledger_transactions').insert([{
         user_id: currentUser.id,
-        type: 'credit',
+        type: 'seva_completed',
         minutes: durationMinutes,
-        label: `${req.serviceType} - ${req.seniorName}`,
+        label: `Seva: ${req.serviceType} for ${req.seniorName}`,
         service: req.serviceType,
         counterparty_id: req.seniorId,
         counterparty_name: req.seniorName,
-        balance: newBalance,
+        balance: newTotalSevaMinutes,
       }]);
 
-      await supabase.from('profiles').update({ time_balance: newBalance }).eq('id', currentUser.id);
-      setCurrentUser((prev) => prev ? { ...prev, time_balance: newBalance, timeBalance: newBalance } : prev);
+      await supabase.from('profiles').update({ time_balance: newTotalSevaMinutes }).eq('id', currentUser.id);
+      setCurrentUser((prev) => prev ? {
+        ...prev,
+        time_balance: newTotalSevaMinutes,
+        timeBalance: newTotalSevaMinutes,
+        total_seva_minutes: newTotalSevaMinutes,
+        totalSevaMinutes: newTotalSevaMinutes,
+      } : prev);
       fetchUserLedger(currentUser.id);
 
       // Notify senior to rate
@@ -626,6 +748,27 @@ export function AppProvider({ children }) {
     );
   }, []);
 
+  // ── Edit Request (Admin) ──────────────────────────────────
+  const editRequest = useCallback(async (requestId, updates) => {
+    try {
+      const payload = {};
+      if (updates.description !== undefined) payload.description = updates.description;
+      if (updates.serviceType !== undefined) payload.service_type = updates.serviceType;
+      if (updates.urgency !== undefined) payload.urgency = updates.urgency;
+      if (updates.location !== undefined) payload.location = updates.location;
+      if (updates.scheduledDate !== undefined) payload.scheduled_date = updates.scheduledDate;
+      if (updates.scheduledTime !== undefined) payload.scheduled_time = updates.scheduledTime;
+      if (updates.estimatedDuration !== undefined) payload.estimated_duration = updates.estimatedDuration;
+      await supabase.from('requests').update(payload).eq('id', requestId);
+    } catch (e) {
+      console.warn('[editRequest] notice:', e.message);
+    }
+
+    setRequests((prev) =>
+      prev.map((r) => (r.id === requestId ? { ...r, ...updates } : r))
+    );
+  }, []);
+
   // ── Cancel Recurring Series ───────────────────────────────
   const cancelSeries = useCallback(async (seriesId) => {
     await supabase.from('requests')
@@ -645,33 +788,47 @@ export function AppProvider({ children }) {
       body: 'Welcome to Time Bank of India. You can now create and accept requests.',
     });
     setPendingApprovals((prev) => prev.filter((p) => p.id !== pendingId));
+    setMembers((prev) => prev.map((m) => m.id === pendingId ? { ...m, kyc_status: KYC_STATUS.VERIFIED } : m));
     fetchMembers();
   }, [fetchMembers]);
 
   const rejectUser = useCallback(async (pendingId) => {
     await supabase.from('profiles').update({ kyc_status: KYC_STATUS.REJECTED }).eq('id', pendingId);
     setPendingApprovals((prev) => prev.filter((p) => p.id !== pendingId));
+    setMembers((prev) => prev.map((m) => m.id === pendingId ? { ...m, kyc_status: KYC_STATUS.REJECTED } : m));
     fetchMembers();
   }, [fetchMembers]);
 
   const blockUser = useCallback(async (userId) => {
     await supabase.from('profiles').update({ is_blocked: true }).eq('id', userId);
+    setMembers((prev) => prev.map((m) => m.id === userId ? { ...m, is_blocked: true } : m));
     fetchMembers();
   }, [fetchMembers]);
 
   const unblockUser = useCallback(async (userId) => {
     await supabase.from('profiles').update({ is_blocked: false }).eq('id', userId);
+    setMembers((prev) => prev.map((m) => m.id === userId ? { ...m, is_blocked: false } : m));
     fetchMembers();
   }, [fetchMembers]);
 
   // ── Approve Pincode Admin Role ────────────────────────────
   const approvePincodeAdmin = useCallback(async (userId) => {
-    const { data: profile } = await supabase.from('profiles').select('roles').eq('id', userId).single();
-    const roles = profile?.roles || ['admin'];
-    await supabase.from('profiles').update({
-      pincode_admin_approved: true,
-      roles: [...new Set([...roles, 'admin'])],
-    }).eq('id', userId);
+    try {
+      const { data: profile } = await supabase.from('profiles').select('roles').eq('id', userId).single();
+      const roles = profile?.roles || ['admin'];
+      await supabase.from('profiles').update({
+        pincode_admin_approved: true,
+        roles: [...new Set([...roles, 'admin'])],
+      }).eq('id', userId);
+    } catch (e) {
+      console.warn('[approvePincodeAdmin] notice:', e.message);
+    }
+    setMembers((prev) =>
+      prev.map((m) => m.id === userId
+        ? { ...m, pincode_admin_approved: true, roles: [...new Set([...(m.roles || []), 'admin'])] }
+        : m
+      )
+    );
     fetchMembers();
   }, [fetchMembers]);
 
@@ -740,6 +897,25 @@ export function AppProvider({ children }) {
     setPendingRating(null);
   }, []);
 
+  // ── Close Request (RATED -> CLOSED) ───────────────────────
+  const closeRequest = useCallback(async (requestId) => {
+    try {
+      await supabase.from('requests').update({
+        status: REQUEST_STATUS.CLOSED,
+        lifecycle_status: 'closed',
+      }).eq('id', requestId);
+    } catch (e) {
+      console.error('[closeRequest] error:', e);
+    }
+
+    setRequests((prev) =>
+      prev.map((r) => r.id === requestId
+        ? { ...r, status: REQUEST_STATUS.CLOSED, lifecycleStatus: 'closed' }
+        : r
+      )
+    );
+  }, []);
+
   // ── Preferred Circle ──────────────────────────────────────
   const addToTrustedCircle = useCallback(async (targetUserId) => {
     if (!currentUser?.id) return;
@@ -759,12 +935,21 @@ export function AppProvider({ children }) {
 
   const getTrustedCircle = useCallback(async () => {
     if (!currentUser?.id) return [];
-    const { data } = await supabase
-      .from('preferences')
-      .select('target_user_id, profiles!preferences_target_user_id_fkey(id, name, role, area, rating)')
-      .eq('user_id', currentUser.id)
-      .eq('relationship', 'trusted');
-    return (data || []).map((p) => p.profiles).filter(Boolean);
+    try {
+      const { data, error } = await supabase
+        .from('preferences')
+        .select('target_user_id, profiles!preferences_target_user_id_fkey(id, name, role, area)')
+        .eq('user_id', currentUser.id)
+        .eq('relationship', 'trusted');
+      if (error) {
+        console.warn('[getTrustedCircle] query warning:', error.message);
+        return [];
+      }
+      return (data || []).map((p) => p.profiles).filter(Boolean);
+    } catch (e) {
+      console.warn('[getTrustedCircle] exception:', e);
+      return [];
+    }
   }, [currentUser]);
 
   // ── Volunteer Status ──────────────────────────────────────
@@ -776,23 +961,87 @@ export function AppProvider({ children }) {
 
   // ── Leaderboard ───────────────────────────────────────────
   const fetchLeaderboard = useCallback(async ({ pincode, period = 'all' } = {}) => {
-    let query = supabase
-      .from('profiles')
-      .select('id, name, area, pincode, rating, time_balance, hide_from_leaderboard')
-      .eq('role', 'volunteer')
-      .eq('kyc_status', 'verified')
-      .eq('hide_from_leaderboard', false)
-      .eq('is_blocked', false)
-      .order('time_balance', { ascending: false })
-      .limit(100);
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
 
-    if (pincode) {
-      query = query.eq('pincode', pincode);
+    const volunteerMap = new Map();
+    members.forEach((m) => {
+      const isVol = m.role === ROLES.VOLUNTEER || (m.roles || []).includes(ROLES.VOLUNTEER);
+      if (isVol && !m.is_blocked && !m.hide_from_leaderboard) {
+        volunteerMap.set(m.id, {
+          id: m.id,
+          name: m.name,
+          area: m.area || 'Local Area',
+          pincode: m.pincode || '400001',
+          total_seva_minutes: 0,
+          tasks_completed: 0,
+        });
+      }
+    });
+
+    if (currentUser && (currentUser.role === ROLES.VOLUNTEER || (currentUser.roles || []).includes(ROLES.VOLUNTEER))) {
+      if (!volunteerMap.has(currentUser.id)) {
+        volunteerMap.set(currentUser.id, {
+          id: currentUser.id,
+          name: currentUser.name,
+          area: currentUser.area || 'Local Area',
+          pincode: currentUser.pincode || '400001',
+          total_seva_minutes: 0,
+          tasks_completed: 0,
+        });
+      }
     }
 
-    const { data } = await query;
-    return data || [];
-  }, []);
+    const completedReqs = requests.filter((r) => {
+      const isCompleted = [REQUEST_STATUS.COMPLETED, REQUEST_STATUS.RATED, REQUEST_STATUS.CLOSED].includes(r.status);
+      if (!isCompleted) return false;
+
+      const dateStr = r.completedAt || r.completed_at || r.createdAt || r.created_at;
+      if (!dateStr) return true;
+      const d = new Date(dateStr);
+
+      if (period === 'month') {
+        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+      }
+      if (period === 'year') {
+        return d.getFullYear() === currentYear;
+      }
+      return true;
+    });
+
+    completedReqs.forEach((r) => {
+      const volId = r.assignedVolunteerId || r.assigned_volunteer_id;
+      if (volId && volunteerMap.has(volId)) {
+        const entry = volunteerMap.get(volId);
+        entry.total_seva_minutes += (r.duration || 60);
+        entry.tasks_completed += 1;
+      }
+    });
+
+    const results = Array.from(volunteerMap.values()).map((v) => {
+      const volRatings = ratings.filter((rat) => rat.reviewee_id === v.id || rat.revieweeId === v.id);
+      const avg = volRatings.length > 0
+        ? (volRatings.reduce((s, rat) => s + rat.stars, 0) / volRatings.length)
+        : null;
+      return {
+        ...v,
+        time_balance: v.total_seva_minutes,
+        totalSevaMinutes: v.total_seva_minutes,
+        tasksCompleted: v.tasks_completed,
+        rating: avg,
+        reviewCount: volRatings.length,
+      };
+    });
+
+    let filtered = results;
+    if (pincode) {
+      filtered = filtered.filter((v) => v.pincode === pincode);
+    }
+
+    filtered.sort((a, b) => b.totalSevaMinutes - a.totalSevaMinutes || b.tasksCompleted - a.tasksCompleted);
+    return filtered;
+  }, [members, currentUser, requests, ratings]);
 
   // ── Selectors ─────────────────────────────────────────────
   const getUserLedger = useCallback(
@@ -811,7 +1060,7 @@ export function AppProvider({ children }) {
   );
 
   const getOpenRequests = useCallback(
-    () => requests.filter((r) => r.status === REQUEST_STATUS.OPEN),
+    () => requests.filter((r) => r.status === REQUEST_STATUS.OPEN || r.status === REQUEST_STATUS.NOTIFIED_TRUSTED),
     [requests]
   );
 
@@ -829,15 +1078,80 @@ export function AppProvider({ children }) {
     );
   }, [requests, currentUser]);
 
+  // ── Unified Volunteer Metrics (Single coherent source of truth) ──
+  const getVolunteerMetrics = useCallback((volunteerId) => {
+    const volId = volunteerId || currentUser?.id;
+    if (!volId) {
+      return {
+        totalSevaMinutes: 0,
+        tasksCompleted: 0,
+        peopleHelped: 0,
+        thisMonthTasks: 0,
+        thisMonthMinutes: 0,
+        avgRating: null,
+        reviewCount: 0,
+        completedTasks: [],
+      };
+    }
+
+    const completedTasks = requests.filter(
+      (r) => (r.assignedVolunteerId === volId || r.assigned_volunteer_id === volId) &&
+        [REQUEST_STATUS.COMPLETED, REQUEST_STATUS.RATED, REQUEST_STATUS.CLOSED].includes(r.status)
+    );
+
+    const tasksCompleted = completedTasks.length;
+    const totalSevaMinutes = completedTasks.reduce((sum, r) => sum + (r.duration || 60), 0);
+
+    const uniquePeople = new Set(
+      completedTasks.map((r) => r.seniorId || r.senior_id || r.seniorName).filter(Boolean)
+    );
+    const peopleHelped = uniquePeople.size;
+
+    const now = new Date();
+    const thisMonthCompleted = completedTasks.filter((r) => {
+      const d = new Date(r.completedAt || r.completed_at || r.createdAt || r.created_at);
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    });
+    const thisMonthTasks = thisMonthCompleted.length;
+    const thisMonthMinutes = thisMonthCompleted.reduce((sum, r) => sum + (r.duration || 60), 0);
+
+    const volRatings = ratings.filter((r) => r.reviewee_id === volId || r.revieweeId === volId);
+    const reviewCount = volRatings.length;
+    const avgRating = reviewCount > 0
+      ? (volRatings.reduce((sum, r) => sum + r.stars, 0) / reviewCount).toFixed(1)
+      : null;
+
+    return {
+      totalSevaMinutes,
+      tasksCompleted,
+      peopleHelped,
+      thisMonthTasks,
+      thisMonthMinutes,
+      avgRating,
+      reviewCount,
+      completedTasks,
+    };
+  }, [currentUser, requests, ratings]);
+
+  const isSuperAdmin = Boolean(
+    currentUser?.is_super_admin === true ||
+    currentUser?.role === 'super_admin' ||
+    (currentUser?.roles || []).includes('super_admin')
+  );
+
   const getAdminPincodeMembers = useCallback(() => {
-    if (!currentUser?.pincode) return members;
+    if (isSuperAdmin || !currentUser?.pincode) return members;
     return members.filter((m) => m.pincode === currentUser.pincode);
-  }, [members, currentUser]);
+  }, [members, currentUser, isSuperAdmin]);
 
   const getPincodeAdminRequests = useCallback(() => {
-    if (!currentUser?.pincode) return [];
-    return members.filter((m) => m.pincode === currentUser.pincode && (m.roles || []).includes('admin') && !m.pincode_admin_approved);
-  }, [members, currentUser]);
+    if (!isSuperAdmin && currentUser?.role !== ROLES.ADMIN) return [];
+    return members.filter((m) =>
+      (m.roles || []).includes('admin') &&
+      !m.pincode_admin_approved &&
+      (isSuperAdmin || !currentUser?.pincode || m.pincode === currentUser.pincode)
+    );
+  }, [members, currentUser, isSuperAdmin]);
 
   const value = {
     currentUser,
@@ -860,8 +1174,12 @@ export function AppProvider({ children }) {
     pendingRating,
     notifications,
     unreadCount,
+    isSuperAdmin,
     // Auth
+    loginWithPin,
+    setUserPin,
     createRequest,
+    editRequest,
     acceptRequest,
     cancelRequest,
     reassignRequest,
@@ -875,6 +1193,7 @@ export function AppProvider({ children }) {
     approvePincodeAdmin,
     submitRating,
     dismissRating,
+    closeRequest,
     // Roles
     switchRole,
     addRole,
@@ -896,6 +1215,7 @@ export function AppProvider({ children }) {
     getOpenRequests,
     getUserRatings,
     getVolunteerActiveRequest,
+    getVolunteerMetrics,
     getAdminPincodeMembers,
     getPincodeAdminRequests,
     fetchRequests,

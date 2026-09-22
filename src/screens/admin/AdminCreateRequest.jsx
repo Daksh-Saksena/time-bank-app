@@ -1,12 +1,12 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
-import { supabase } from '../../lib/supabase';
 import { SERVICE_TYPES, SERVICE_LABELS, SERVICE_ICONS, URGENCY, ROLES } from '../../constants';
-import { ArrowLeft, Check } from 'lucide-react';
+import { ArrowLeft, Check, ShieldCheck, Clock, Calendar, AlertCircle } from 'lucide-react';
+import { getPincodeLocation } from '../../lib/geo';
 
 export default function AdminCreateRequest() {
-  const { currentUser, createRequest, members } = useApp();
+  const { currentUser, isSuperAdmin, createRequest, members } = useApp();
   const navigate = useNavigate();
 
   const [selectedMember, setSelectedMember] = useState(null);
@@ -16,20 +16,27 @@ export default function AdminCreateRequest() {
     description: '',
     urgency: URGENCY.NORMAL,
     location: '',
-    pincode: currentUser?.pincode || '',
-    scheduledTime: '',
+    pincode: currentUser?.pincode || '400001',
+    scheduledDate: 'Today',
+    scheduledTime: '16:00',
+    estimatedDuration: 30,
   });
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Filter seniors in admin's pincode
-  const pincodeSeniors = members.filter(
-    (m) => m.role === ROLES.SENIOR && (!currentUser?.pincode || m.pincode === currentUser.pincode)
+  // Filter seniors in admin's pincode (or all if super admin)
+  const availableSeniors = members.filter(
+    (m) => (m.role === ROLES.SENIOR || (m.roles || []).includes(ROLES.SENIOR)) &&
+      (isSuperAdmin || !currentUser?.pincode || m.pincode === currentUser.pincode)
   );
 
-  const filteredSeniors = pincodeSeniors.filter(
-    (m) => !searchQuery || m.name?.toLowerCase().includes(searchQuery.toLowerCase()) || m.phone?.includes(searchQuery)
+  const filteredSeniors = availableSeniors.filter(
+    (m) =>
+      !searchQuery ||
+      m.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      m.phone?.includes(searchQuery) ||
+      m.area?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   function updateForm(key, value) {
@@ -38,36 +45,33 @@ export default function AdminCreateRequest() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!selectedMember) { setError('Please select a member.'); return; }
-    if (!form.description) { setError('Please describe the help needed.'); return; }
+    if (!selectedMember) {
+      setError('Please select a senior member from the list.');
+      return;
+    }
+    if (!form.description.trim()) {
+      setError('Please describe the assistance needed.');
+      return;
+    }
+
     setError('');
     setLoading(true);
     try {
-      // Use createRequest with admin overrides
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-
-      const payload = {
-        ...form,
-        createdByAdminId: currentUser?.id,
-        createdByAdminName: currentUser?.name,
-      };
-
-      // Insert directly as the senior's request
-      const { error: insertError } = await supabase.from('requests').insert([{
-        senior_id: selectedMember.id,
-        senior_name: selectedMember.name,
-        service_type: form.serviceType,
-        description: form.description,
+      await createRequest({
+        seniorId: selectedMember.id,
+        seniorName: selectedMember.name,
+        serviceType: form.serviceType,
+        description: form.description.trim(),
         location: form.location || selectedMember.area || 'Local Area',
-        pincode: form.pincode || selectedMember.pincode || currentUser?.pincode || '400001',
+        pincode: selectedMember.pincode || currentUser?.pincode || '400001',
         urgency: form.urgency,
-        status: 'open',
-        lifecycle_status: 'created',
-        created_by_admin_id: currentUser?.id,
-        created_by_admin_name: currentUser?.name,
-      }]);
+        scheduledDate: form.scheduledDate,
+        scheduledTime: form.scheduledTime,
+        estimatedDuration: parseInt(form.estimatedDuration || 30, 10),
+        createdByAdminId: currentUser?.id || 'admin',
+        createdByAdminName: currentUser?.name || 'Pincode Admin',
+      });
 
-      if (insertError) throw insertError;
       setSubmitted(true);
     } catch (err) {
       setError(err.message || 'Failed to create request. Please try again.');
@@ -79,94 +83,165 @@ export default function AdminCreateRequest() {
   if (submitted) {
     return (
       <div className="page-content no-nav" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', padding: 'var(--space-6)' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ width: 70, height: 70, borderRadius: '50%', background: 'var(--color-success)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto var(--space-4)' }}>
-            <Check size={40} />
+        <div style={{ textAlign: 'center', maxWidth: 400 }}>
+          <div style={{ width: 72, height: 72, borderRadius: '50%', background: '#16A34A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto var(--space-4)', boxShadow: '0 4px 14px rgba(22, 163, 74, 0.3)' }}>
+            <Check size={42} />
           </div>
-          <h2 style={{ marginBottom: 'var(--space-3)' }}>Request Created!</h2>
-          <p style={{ color: 'var(--color-text-muted)', marginBottom: 'var(--space-2)' }}>
-            Request created on behalf of <strong>{selectedMember?.name}</strong>
+          <h2 style={{ marginBottom: 'var(--space-2)', fontWeight: 800 }}>Request Created Successfully!</h2>
+          <p style={{ color: 'var(--color-text-muted)', marginBottom: 'var(--space-4)' }}>
+            Created on behalf of <strong>{selectedMember?.name}</strong>
           </p>
-          <div className="alert alert-info" style={{ marginBottom: 'var(--space-5)', textAlign: 'left' }}>
-            🛡️ Tagged: "Created by Admin {currentUser?.name} for {selectedMember?.name}"
+
+          <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: 'var(--radius-lg)', padding: '12px 16px', marginBottom: 'var(--space-5)', textAlign: 'left', fontSize: 'var(--font-size-sm)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, color: '#1E40AF', marginBottom: 4 }}>
+              <ShieldCheck size={16} color="#2563EB" />
+              <span>Official Admin Record</span>
+            </div>
+            <div style={{ color: '#1E3A8A' }}>
+              Tagged: "Created by Admin <strong>{currentUser?.name || 'Admin'}</strong> on behalf of {selectedMember?.name}"
+            </div>
           </div>
+
           <button className="btn btn-primary btn-full btn-lg" onClick={() => navigate('/admin/requests')}>
-            View All Requests
+            View in Request Lifecycle
           </button>
-          <button className="btn btn-ghost btn-full" style={{ marginTop: 'var(--space-3)' }} onClick={() => { setSubmitted(false); setSelectedMember(null); setForm({ serviceType: SERVICE_TYPES.MEDICINE, description: '', urgency: URGENCY.NORMAL, location: '', pincode: currentUser?.pincode || '', scheduledTime: '' }); }}>
-            Create Another Request
+          <button
+            className="btn btn-ghost btn-full"
+            style={{ marginTop: 'var(--space-3)' }}
+            onClick={() => {
+              setSubmitted(false);
+              setSelectedMember(null);
+              setForm({
+                serviceType: SERVICE_TYPES.MEDICINE,
+                description: '',
+                urgency: URGENCY.NORMAL,
+                location: '',
+                pincode: currentUser?.pincode || '400001',
+                scheduledDate: 'Today',
+                scheduledTime: '16:00',
+                estimatedDuration: 30,
+              });
+            }}
+          >
+            + Create Another Request
           </button>
         </div>
       </div>
     );
   }
 
+  const adminGeo = getPincodeLocation(currentUser?.pincode, currentUser?.area);
+
   return (
     <div className="page-content no-nav">
-      <div style={{ background: 'var(--color-primary)', padding: 'var(--space-5)' }}>
+      {/* Header */}
+      <div style={{ background: 'linear-gradient(135deg, #1A365D 0%, #2563EB 100%)', padding: 'var(--space-5)' }}>
         <button
           onClick={() => navigate(-1)}
           style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '50%', width: 36, height: 36, cursor: 'pointer', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 'var(--space-3)' }}
         >
           <ArrowLeft size={20} />
         </button>
-        <h2 style={{ color: 'white', fontWeight: 700 }}>Create Request for Member</h2>
-        <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 'var(--font-size-sm)' }}>
-          Creating on behalf of a senior in Pincode {currentUser?.pincode}
+        <h2 style={{ color: 'white', fontWeight: 800, marginBottom: 2 }}>Create Request for Member</h2>
+        <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: 'var(--font-size-sm)' }}>
+          {isSuperAdmin
+            ? 'Super Admin Mode · Cross-Pincode Creation'
+            : `Pincode ${currentUser?.pincode || '400001'} · ${adminGeo.full}`}
         </p>
       </div>
 
       <form onSubmit={handleSubmit} style={{ padding: 'var(--space-5)' }}>
         {/* Step 1: Select Member */}
         <div style={{ marginBottom: 'var(--space-5)' }}>
-          <h4 style={{ marginBottom: 'var(--space-3)' }}>1. Select Member</h4>
+          <h4 style={{ marginBottom: 'var(--space-2)', fontWeight: 800 }}>1. Select Senior Member</h4>
+          <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-3)' }}>
+            Choose a senior from {isSuperAdmin ? 'all registered members' : `Pincode ${currentUser?.pincode || '400001'}`}
+          </p>
           <input
             className="input"
-            placeholder="Search by name or phone…"
+            placeholder="Search member by name, phone or area…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             style={{ marginBottom: 'var(--space-3)' }}
           />
+
           <div style={{ maxHeight: 220, overflowY: 'auto', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)' }}>
             {filteredSeniors.length === 0 ? (
               <div style={{ padding: 'var(--space-4)', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>
-                No seniors found in your pincode
+                No senior members found
               </div>
-            ) : filteredSeniors.map((m) => (
-              <button
-                key={m.id}
-                type="button"
-                onClick={() => setSelectedMember(m)}
-                style={{
-                  width: '100%', display: 'flex', alignItems: 'center', gap: 12,
-                  padding: 'var(--space-3) var(--space-4)',
-                  background: selectedMember?.id === m.id ? 'var(--color-surface-alt)' : 'white',
-                  border: 'none', borderBottom: '1px solid var(--color-border)',
-                  cursor: 'pointer', fontFamily: 'var(--font-family)', textAlign: 'left',
-                }}
-              >
-                <div style={{ width: 36, height: 36, borderRadius: '50%', background: selectedMember?.id === m.id ? 'var(--color-primary)' : 'var(--color-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: selectedMember?.id === m.id ? 'white' : 'var(--color-text-muted)', fontWeight: 700, fontSize: 'var(--font-size-sm)', flexShrink: 0 }}>
-                  {m.name?.[0] || 'M'}
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: selectedMember?.id === m.id ? 700 : 500, fontSize: 'var(--font-size-sm)' }}>{m.name}</div>
-                  <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>{m.area} · {m.phone || 'No phone'}</div>
-                </div>
-                {selectedMember?.id === m.id && <span style={{ color: 'var(--color-primary)', fontWeight: 700 }}>✓</span>}
-              </button>
-            ))}
+            ) : (
+              filteredSeniors.map((m) => {
+                const isSelected = selectedMember?.id === m.id;
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedMember(m);
+                      if (!form.location) {
+                        setForm((prev) => ({ ...prev, location: m.area || '' }));
+                      }
+                    }}
+                    style={{
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 12,
+                      padding: 'var(--space-3) var(--space-4)',
+                      background: isSelected ? '#EFF6FF' : 'white',
+                      border: 'none',
+                      borderBottom: '1px solid var(--color-border)',
+                      cursor: 'pointer',
+                      fontFamily: 'var(--font-family)',
+                      textAlign: 'left',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: '50%',
+                        background: isSelected ? 'var(--color-primary)' : 'var(--color-border)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: isSelected ? 'white' : 'var(--color-text-muted)',
+                        fontWeight: 700,
+                        fontSize: 'var(--font-size-sm)',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {m.name?.[0] || 'S'}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: isSelected ? 800 : 600, fontSize: 'var(--font-size-sm)', color: isSelected ? 'var(--color-primary)' : 'inherit' }}>
+                        {m.name}
+                      </div>
+                      <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
+                        {m.area || 'Local Area'} · {m.phone || 'No phone'} · Age {m.age || 70}
+                      </div>
+                    </div>
+                    {isSelected && <span style={{ color: 'var(--color-primary)', fontWeight: 800 }}>✓ Selected</span>}
+                  </button>
+                );
+              })
+            )}
           </div>
         </div>
 
         {selectedMember && (
           <>
-            <div className="alert alert-info" style={{ marginBottom: 'var(--space-4)' }}>
-              🛡️ Creating request for <strong>{selectedMember.name}</strong> ({selectedMember.area})
+            <div className="alert alert-info" style={{ marginBottom: 'var(--space-4)', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <ShieldCheck size={18} color="#2563EB" />
+              <span>
+                Creating on behalf of <strong>{selectedMember.name}</strong> ({selectedMember.area || 'Local Area'})
+              </span>
             </div>
 
-            {/* Service Type */}
+            {/* Step 2: Service Type */}
             <div className="input-group" style={{ marginBottom: 'var(--space-4)' }}>
-              <label className="input-label">2. Type of Help Needed</label>
+              <label className="input-label" style={{ fontWeight: 700 }}>2. Type of Help Needed</label>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-2)' }}>
                 {Object.values(SERVICE_TYPES).map((type) => (
                   <button
@@ -174,13 +249,19 @@ export default function AdminCreateRequest() {
                     type="button"
                     onClick={() => updateForm('serviceType', type)}
                     style={{
-                      padding: 'var(--space-3)', borderRadius: 'var(--radius-md)',
+                      padding: 'var(--space-3)',
+                      borderRadius: 'var(--radius-md)',
                       border: `2px solid ${form.serviceType === type ? 'var(--color-primary)' : 'var(--color-border)'}`,
-                      background: form.serviceType === type ? '#EBF5FB' : 'white',
-                      cursor: 'pointer', fontFamily: 'var(--font-family)', fontWeight: 600,
+                      background: form.serviceType === type ? '#EFF6FF' : 'white',
+                      cursor: 'pointer',
+                      fontFamily: 'var(--font-family)',
+                      fontWeight: 600,
                       fontSize: 'var(--font-size-sm)',
                       color: form.serviceType === type ? 'var(--color-primary)' : 'var(--color-text-secondary)',
-                      display: 'flex', alignItems: 'center', gap: 8, minHeight: 48,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      minHeight: 48,
                     }}
                   >
                     <span>{SERVICE_ICONS[type]}</span>
@@ -190,12 +271,12 @@ export default function AdminCreateRequest() {
               </div>
             </div>
 
-            {/* Description */}
+            {/* Step 3: Description */}
             <div className="input-group" style={{ marginBottom: 'var(--space-4)' }}>
-              <label className="input-label">3. Describe the Help Needed</label>
+              <label className="input-label" style={{ fontWeight: 700 }}>3. Describe the Help Needed</label>
               <textarea
                 className="input"
-                placeholder="e.g. Senior needs medicine from nearby pharmacy, Cipla tablet listed below…"
+                placeholder="e.g. Senior requires assistance fetching hypertension medicine from chemist, or accompaniment to clinic…"
                 value={form.description}
                 onChange={(e) => updateForm('description', e.target.value)}
                 rows={3}
@@ -203,23 +284,66 @@ export default function AdminCreateRequest() {
               />
             </div>
 
-            {/* Urgency */}
+            {/* Step 4: Scheduling & Duration */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)', marginBottom: 'var(--space-4)' }}>
+              <div className="input-group">
+                <label className="input-label" style={{ fontWeight: 700 }}>
+                  <Calendar size={14} style={{ display: 'inline', marginRight: 4 }} />
+                  Date
+                </label>
+                <select
+                  className="input"
+                  value={form.scheduledDate}
+                  onChange={(e) => updateForm('scheduledDate', e.target.value)}
+                >
+                  <option value="Today">Today (आज)</option>
+                  <option value="Tomorrow">Tomorrow (कल)</option>
+                  <option value="This Weekend">This Weekend</option>
+                  <option value="Next Week">Next Week</option>
+                </select>
+              </div>
+              <div className="input-group">
+                <label className="input-label" style={{ fontWeight: 700 }}>
+                  <Clock size={14} style={{ display: 'inline', marginRight: 4 }} />
+                  Time & Est.
+                </label>
+                <select
+                  className="input"
+                  value={form.estimatedDuration}
+                  onChange={(e) => updateForm('estimatedDuration', e.target.value)}
+                >
+                  <option value={30}>~30 mins</option>
+                  <option value={45}>~45 mins</option>
+                  <option value={60}>~1 hour (60m)</option>
+                  <option value={90}>~1.5 hours (90m)</option>
+                  <option value={120}>~2 hours (120m)</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Step 5: Urgency */}
             <div className="input-group" style={{ marginBottom: 'var(--space-4)' }}>
-              <label className="input-label">4. Urgency</label>
+              <label className="input-label" style={{ fontWeight: 700 }}>5. Urgency</label>
               <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
                 {[
-                  { value: URGENCY.NORMAL, label: 'Normal', desc: 'Flexible timing' },
-                  { value: URGENCY.HIGH, label: '🚨 Urgent', desc: 'Need help ASAP' },
+                  { value: URGENCY.NORMAL, label: '🟢 Normal', desc: 'Flexible timing' },
+                  { value: URGENCY.HIGH, label: '🔴 High Priority', desc: 'Urgent / immediate' },
                 ].map(({ value, label, desc }) => (
                   <button
                     key={value}
                     type="button"
                     onClick={() => updateForm('urgency', value)}
                     style={{
-                      flex: 1, padding: 'var(--space-3)', borderRadius: 'var(--radius-md)',
+                      flex: 1,
+                      padding: 'var(--space-3)',
+                      borderRadius: 'var(--radius-md)',
                       border: `2px solid ${form.urgency === value ? (value === URGENCY.HIGH ? 'var(--color-danger)' : 'var(--color-success)') : 'var(--color-border)'}`,
                       background: form.urgency === value ? (value === URGENCY.HIGH ? 'var(--color-danger-bg)' : 'var(--color-success-bg)') : 'white',
-                      cursor: 'pointer', fontFamily: 'var(--font-family)', fontWeight: 600, fontSize: 'var(--font-size-sm)', minHeight: 56,
+                      cursor: 'pointer',
+                      fontFamily: 'var(--font-family)',
+                      fontWeight: 700,
+                      fontSize: 'var(--font-size-sm)',
+                      minHeight: 56,
                     }}
                   >
                     <div>{label}</div>
@@ -229,25 +353,29 @@ export default function AdminCreateRequest() {
               </div>
             </div>
 
-            {/* Location */}
+            {/* Step 6: Location */}
             <div className="input-group" style={{ marginBottom: 'var(--space-4)' }}>
-              <label className="input-label">5. Location / Landmark</label>
+              <label className="input-label" style={{ fontWeight: 700 }}>6. Location / Landmark</label>
               <input
                 className="input"
-                placeholder={selectedMember.area || 'e.g. Near Community Center'}
+                placeholder={selectedMember.area || 'e.g. Near Post Office / Apartment #'}
                 value={form.location}
                 onChange={(e) => updateForm('location', e.target.value)}
               />
             </div>
 
             {error && (
-              <div className="alert alert-warning" style={{ marginBottom: 'var(--space-4)' }}>{error}</div>
+              <div className="alert alert-warning" style={{ marginBottom: 'var(--space-4)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <AlertCircle size={16} color="#D97706" />
+                <span>{error}</span>
+              </div>
             )}
 
             <button
               className="btn btn-primary btn-full btn-lg"
               type="submit"
-              disabled={loading || !form.description}
+              disabled={loading || !form.description.trim()}
+              style={{ minHeight: 56, fontWeight: 800, fontSize: '1.05rem', borderRadius: 'var(--radius-lg)' }}
             >
               {loading ? 'Creating Request…' : '🛡️ Create Request on Behalf of Member'}
             </button>

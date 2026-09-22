@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
 import { LanguageProvider } from './context/LanguageContext';
-import { ROLES } from './constants';
+import { ROLES, getRoleLabel } from './constants';
 import BottomNav from './components/common/BottomNav';
 import RatingModal from './components/common/RatingModal';
 import LanguageModal from './components/common/LanguageModal';
@@ -104,7 +104,7 @@ function AppLayout({ children, showNav = true }) {
                   fontWeight: 700, fontFamily: 'var(--font-family)', display: 'flex', alignItems: 'center', gap: 4,
                 }}
               >
-                <span>{currentUser.active_role || currentUser.role}</span> ⇄
+                <span>{getRoleLabel(currentUser.active_role || currentUser.role)}</span> ⇄
               </button>
             )}
             <NotificationBell />
@@ -163,6 +163,7 @@ function AppRoutes() {
             <Routes>
               <Route path="home" element={<SeniorHome />} />
               <Route path="request" element={<RequestHelp />} />
+              <Route path="my-requests" element={<NearbyFeed role="senior" />} />
               <Route path="nearby" element={<NearbyFeed role="senior" />} />
               <Route path="ledger" element={<TimeLedger />} />
               <Route path="profile" element={<SeniorProfile />} />

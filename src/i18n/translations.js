@@ -30,7 +30,7 @@ export const TRANSLATIONS = {
     
     // Auth & Welcome
     appName: 'Time Bank of India',
-    tagline: 'A community where time is currency. Help others, earn time, and let the community support you.',
+    tagline: 'A community of mutual care and pure Seva. Help others voluntarily and receive support with community gratitude.',
     signIn: 'Sign In',
     signInPhone: 'Sign In with Phone',
     createAccount: 'Create Account',
@@ -42,7 +42,7 @@ export const TRANSLATIONS = {
 
     // Senior Home & Services
     goodMorning: 'Good morning',
-    timeBalance: 'Time Balance',
+    timeBalance: 'Seva Given',
     yourPincode: 'Your Pincode',
     iNeedHelpWith: 'I need help with…',
     tapButtonHelp: 'Tap a button to request assistance from your community.',
@@ -129,7 +129,7 @@ export const TRANSLATIONS = {
 
     // Senior Home & Services
     goodMorning: 'शुभ प्रभात',
-    timeBalance: 'समय शेष',
+    timeBalance: 'कुल सेवा दी (Seva Given)',
     yourPincode: 'आपका पिनकोड',
     iNeedHelpWith: 'मुझे सहायता चाहिए…',
     tapButtonHelp: 'समुदाय से मदद माँगने के लिए किसी विकल्प पर टैप करें।',
@@ -216,7 +216,7 @@ export const TRANSLATIONS = {
 
     // Senior Home & Services
     goodMorning: 'ಶುಭೋದಯ',
-    timeBalance: 'ಸಮಯದ ಬ್ಯಾಲೆನ್ಸ್',
+    timeBalance: 'ಸೇವೆ ನೀಡಲಾಗಿದೆ (Seva Given)',
     yourPincode: 'ನಿಮ್ಮ ಪಿನ್‌ಕೋಡ್',
     iNeedHelpWith: 'ನನಗೆ ಸಹಾಯ ಬೇಕಾಗಿದೆ…',
     tapButtonHelp: 'ಸಹಾಯ ಪಡೆಯಲು ಕೆಳಗಿನ ಬಟನ್ ಒತ್ತಿರಿ.',
@@ -303,7 +303,7 @@ export const TRANSLATIONS = {
 
     // Senior Home & Services
     goodMorning: 'காலை வணக்கம்',
-    timeBalance: 'நேர இருப்பு',
+    timeBalance: 'வழங்கப்பட்ட சேவை (Seva Given)',
     yourPincode: 'உங்கள் அஞ்சல் குறியீடு',
     iNeedHelpWith: 'எனக்கு உதவி தேவை…',
     tapButtonHelp: 'சமூகத்திடம் உதவி கோர பொத்தானைத் தட்டவும்.',
@@ -390,7 +390,7 @@ export const TRANSLATIONS = {
 
     // Senior Home & Services
     goodMorning: 'శుభోదయం',
-    timeBalance: 'సమయ బ్యాలెన్స్',
+    timeBalance: 'అందించిన సేవ (Seva Given)',
     yourPincode: 'మీ పిన్‌కోడ్',
     iNeedHelpWith: 'నాకు సహాయం కావాలి…',
     tapButtonHelp: 'సహాయం కోరడానికి క్రింది బటన్‌పై నొక్కండి.',
@@ -477,7 +477,7 @@ export const TRANSLATIONS = {
 
     // Senior Home & Services
     goodMorning: 'शुभ सकाळ',
-    timeBalance: 'वेळ शिल्लक',
+    timeBalance: 'दिलेली सेवा (Seva Given)',
     yourPincode: 'तुमचा पिनकोड',
     iNeedHelpWith: 'मला मदत हवी आहे…',
     tapButtonHelp: 'समुदायाकडून मदत मागण्यासाठी पर्यायावर टॅप करा.',

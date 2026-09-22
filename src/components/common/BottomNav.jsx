@@ -30,9 +30,7 @@ export default function BottomNav() {
   const NAV_ITEMS = {
     [ROLES.SENIOR]: [
       { path: '/senior/home', icon: <Home size={iconSize} />, labelKey: 'home', label: 'Home' },
-      { path: '/senior/request', icon: <PlusCircle size={iconSize} />, labelKey: 'request', label: 'Request' },
-      { path: '/senior/nearby', icon: <MapPin size={iconSize} />, labelKey: 'nearby', label: 'Nearby' },
-      { path: '/senior/trusted-circle', icon: <Heart size={iconSize} />, labelKey: 'circle', label: 'Circle' },
+      { path: '/senior/my-requests', icon: <ClipboardList size={iconSize} />, labelKey: 'myRequests', label: 'My Requests' },
       { path: '/senior/profile', icon: <User size={iconSize} />, labelKey: 'profile', label: 'Profile' },
     ],
     [ROLES.VOLUNTEER]: [

@@ -1,8 +1,17 @@
 export const ROLES = {
-  SENIOR: 'senior',
+  MEMBER: 'member',
+  SENIOR: 'member', // backwards compatibility alias: internally senior is mapped to member
   VOLUNTEER: 'volunteer',
   ADMIN: 'admin',
   SUPER_ADMIN: 'super_admin',
+};
+
+export const SEVA_TERMS = {
+  TOTAL_GIVEN: 'Total Seva Given',
+  SERVICES_COMPLETED: 'Services Completed',
+  THIS_MONTH: "This Month's Seva",
+  SEVA_ACTIVITY: 'Seva Activity',
+  PEOPLE_SUPPORTED: 'Community Members Supported',
 };
 
 export const KYC_STATUS = {
@@ -128,4 +137,54 @@ export function formatDate(isoStr) {
 export function isDND() {
   const h = new Date().getHours();
   return h >= 22 || h < 6;
+}
+
+/**
+ * Normalizes any role input (converting legacy 'senior' to 'member')
+ */
+export function normalizeRole(role) {
+  if (!role) return ROLES.MEMBER;
+  if (role === 'senior' || role === ROLES.SENIOR) return ROLES.MEMBER;
+  return role;
+}
+
+/**
+ * Returns human-readable label for roles
+ */
+export function getRoleLabel(role) {
+  const norm = normalizeRole(role);
+  switch (norm) {
+    case ROLES.MEMBER:
+      return 'Senior Citizen (Member)';
+    case ROLES.VOLUNTEER:
+      return 'Volunteer';
+    case ROLES.ADMIN:
+      return 'Pincode Admin';
+    case ROLES.SUPER_ADMIN:
+      return 'Super Admin';
+    default:
+      return 'Member';
+  }
+}
+
+/**
+ * Permission checker for KYC-gated actions
+ */
+export function canPerformSevaAction(user, action = 'accept_task') {
+  if (!user) return false;
+  if (user.is_super_admin) return true;
+  if (user.is_blocked) return false;
+
+  const isVerified = user.kyc_status === KYC_STATUS.VERIFIED;
+  switch (action) {
+    case 'accept_task':
+    case 'start_task':
+    case 'download_certificate':
+      return isVerified;
+    case 'request_help':
+      // Members can request help, but unverified accounts show review status
+      return true;
+    default:
+      return true;
+  }
 }

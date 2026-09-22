@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import RequestCard from '../../components/common/RequestCard';
 import {
-  SERVICE_ICONS, URGENCY, REQUEST_STATUS, SERVICE_LABELS, getDistanceLabel,
+  SERVICE_ICONS, URGENCY, REQUEST_STATUS, SERVICE_LABELS, getDistanceLabel, isDND,
 } from '../../constants';
-import { List, MapPin } from 'lucide-react';
+import { List, MapPin, Moon } from 'lucide-react';
 import RealMap from '../../components/common/RealMap';
 
 const ALL_TYPES = 'all';
 export default function NearbyFeed({ role = 'senior' }) {
-  const { getOpenRequests, getUserRequests, currentUser, acceptRequest, requests, fetchRequests } = useApp();
+  const { getOpenRequests, getUserRequests, currentUser, acceptRequest, requests, fetchRequests, updateVolunteerStatus } = useApp();
+  const navigate = useNavigate();
   const [view, setView] = useState('list');
   const [filterUrgency, setFilterUrgency] = useState(ALL_TYPES);
   const [filterType, setFilterType] = useState(ALL_TYPES);
@@ -17,16 +19,23 @@ export default function NearbyFeed({ role = 'senior' }) {
   useEffect(() => {
     fetchRequests();
   }, [fetchRequests]);
+
   const displayRequests = role === 'volunteer'
     ? getOpenRequests()
     : getUserRequests();
+
   const filtered = displayRequests.filter((r) => {
     if (filterUrgency !== ALL_TYPES && r.urgency !== filterUrgency) return false;
     if (filterType !== ALL_TYPES && r.serviceType !== filterType) return false;
     return true;
   });
-  function handleAccept(req) {
-    acceptRequest(req.id);
+
+  async function handleAccept(req) {
+    if (currentUser?.volunteer_status === 'busy' || currentUser?.volunteer_status === 'dnd') {
+      await updateVolunteerStatus('available');
+    }
+    await acceptRequest(req.id);
+    navigate('/volunteer/task');
   }
   return (
     <div className="page-content">

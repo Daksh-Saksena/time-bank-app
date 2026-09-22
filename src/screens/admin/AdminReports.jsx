@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useApp } from '../../context/AppContext';
-import { supabase } from '../../lib/supabase';
-import { REQUEST_STATUS, ROLES, formatMinutes } from '../../constants';
-import { BarChart2, Users, AlertTriangle, Download, FileText, TrendingUp } from 'lucide-react';
+import { REQUEST_STATUS, ROLES, formatMinutes, SERVICE_TYPES, SERVICE_LABELS, SERVICE_ICONS } from '../../constants';
+import { BarChart2, Users, AlertTriangle, Download, FileText, TrendingUp, ShieldCheck, Filter } from 'lucide-react';
+import { getPincodeLocation } from '../../lib/geo';
 
 // ── Mini bar chart using CSS ──────────────────────────────
 function MiniBar({ label, value, max, color = 'var(--color-primary)' }) {
@@ -21,14 +21,13 @@ function MiniBar({ label, value, max, color = 'var(--color-primary)' }) {
 }
 
 export default function AdminReports() {
-  const { currentUser, requests, members } = useApp();
+  const { currentUser, isSuperAdmin, requests, members, ratings, getVolunteerMetrics } = useApp();
+  const [selectedPincode, setSelectedPincode] = useState(isSuperAdmin ? 'all' : (currentUser?.pincode || '400001'));
   const [stats, setStats] = useState(null);
   const [vulnerableSeniors, setVulnerableSeniors] = useState([]);
   const [volunteerReport, setVolunteerReport] = useState([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState('');
-
-  const pincode = currentUser?.pincode;
 
   const loadStats = useCallback(async () => {
     setLoading(true);
@@ -36,44 +35,55 @@ export default function AdminReports() {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      // Filter requests for this pincode
-      const pincodeRequests = pincode
-        ? requests.filter((r) => r.pincode === pincode)
+      // Filter requests based on scope
+      const scopedRequests = selectedPincode !== 'all'
+        ? requests.filter((r) => r.pincode === selectedPincode)
         : requests;
 
-      const todayRequests = pincodeRequests.filter((r) => new Date(r.createdAt) >= today);
+      const todayRequests = scopedRequests.filter((r) => new Date(r.createdAt || r.created_at) >= today);
 
       // Category breakdown
       const categories = {};
-      pincodeRequests.forEach((r) => {
-        categories[r.serviceType] = (categories[r.serviceType] || 0) + 1;
+      scopedRequests.forEach((r) => {
+        const st = r.serviceType || 'other';
+        categories[st] = (categories[st] || 0) + 1;
       });
 
-      // Volunteer stats
-      const volunteers = members.filter((m) => m.role === ROLES.VOLUNTEER && (!pincode || m.pincode === pincode));
-      const volStats = volunteers.map((v) => {
-        const vReqs = pincodeRequests.filter((r) => r.assignedVolunteerId === v.id);
+      // Volunteer stats derived from getVolunteerMetrics
+      const scopedVolunteers = members.filter((m) =>
+        (m.role === ROLES.VOLUNTEER || (m.roles || []).includes(ROLES.VOLUNTEER)) &&
+        (selectedPincode === 'all' || m.pincode === selectedPincode)
+      );
+
+      const volStats = scopedVolunteers.map((v) => {
+        const vReqs = scopedRequests.filter((r) => r.assignedVolunteerId === v.id || r.assigned_volunteer_id === v.id);
         const accepted = vReqs.filter((r) => [REQUEST_STATUS.ACCEPTED, REQUEST_STATUS.IN_PROGRESS, REQUEST_STATUS.COMPLETED, REQUEST_STATUS.RATED, REQUEST_STATUS.CLOSED].includes(r.status));
         const completed = vReqs.filter((r) => [REQUEST_STATUS.COMPLETED, REQUEST_STATUS.RATED, REQUEST_STATUS.CLOSED].includes(r.status));
-        const totalMins = completed.reduce((s, r) => s + (r.duration || 0), 0);
+        const metrics = getVolunteerMetrics(v.id);
+
         return {
           ...v,
           acceptCount: accepted.length,
           completeCount: completed.length,
-          totalHours: totalMins,
-          acceptPct: vReqs.length > 0 ? Math.round((accepted.length / vReqs.length) * 100) : 0,
-          completePct: accepted.length > 0 ? Math.round((completed.length / accepted.length) * 100) : 0,
+          totalHours: metrics.totalSevaMinutes,
+          acceptPct: vReqs.length > 0 ? Math.round((accepted.length / vReqs.length) * 100) : (accepted.length > 0 ? 100 : 0),
+          completePct: accepted.length > 0 ? Math.round((completed.length / accepted.length) * 100) : (completed.length > 0 ? 100 : 0),
+          avgRating: metrics.avgRating,
+          reviewCount: metrics.reviewCount,
         };
       });
 
       setVolunteerReport(volStats.sort((a, b) => b.totalHours - a.totalHours));
 
-      // Vulnerable seniors (0 activity in last 7 days)
-      const seniors = members.filter((m) => m.role === ROLES.SENIOR && (!pincode || m.pincode === pincode));
-      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-      const vulnerable = seniors.filter((s) => {
-        const recentActivity = pincodeRequests.filter(
-          (r) => r.seniorId === s.id && new Date(r.createdAt) > sevenDaysAgo
+      // Vulnerable seniors (0 activity in last 14 days)
+      const scopedSeniors = members.filter((m) =>
+        (m.role === ROLES.SENIOR || (m.roles || []).includes(ROLES.SENIOR)) &&
+        (selectedPincode === 'all' || m.pincode === selectedPincode)
+      );
+      const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+      const vulnerable = scopedSeniors.filter((s) => {
+        const recentActivity = scopedRequests.filter(
+          (r) => (r.seniorId === s.id || r.senior_id === s.id) && new Date(r.createdAt || r.created_at) > fourteenDaysAgo
         );
         return recentActivity.length === 0;
       });
@@ -81,19 +91,19 @@ export default function AdminReports() {
 
       setStats({
         todayCreated: todayRequests.length,
-        todayPending: todayRequests.filter((r) => r.status === REQUEST_STATUS.OPEN).length,
+        todayPending: todayRequests.filter((r) => r.status === REQUEST_STATUS.OPEN || r.status === REQUEST_STATUS.NOTIFIED_TRUSTED).length,
         todayCompleted: todayRequests.filter((r) => [REQUEST_STATUS.COMPLETED, REQUEST_STATUS.RATED, REQUEST_STATUS.CLOSED].includes(r.status)).length,
-        totalCompleted: pincodeRequests.filter((r) => [REQUEST_STATUS.COMPLETED, REQUEST_STATUS.RATED, REQUEST_STATUS.CLOSED].includes(r.status)).length,
-        totalCancelled: pincodeRequests.filter((r) => r.status === REQUEST_STATUS.CANCELLED).length,
-        totalSeniors: seniors.length,
-        totalVolunteers: volunteers.length,
+        totalCompleted: scopedRequests.filter((r) => [REQUEST_STATUS.COMPLETED, REQUEST_STATUS.RATED, REQUEST_STATUS.CLOSED].includes(r.status)).length,
+        totalCancelled: scopedRequests.filter((r) => r.status === REQUEST_STATUS.CANCELLED).length,
+        totalSeniors: scopedSeniors.length,
+        totalVolunteers: scopedVolunteers.length,
         categories,
         categoryMax: Math.max(...Object.values(categories), 1),
       });
     } finally {
       setLoading(false);
     }
-  }, [requests, members, pincode]);
+  }, [requests, members, selectedPincode, getVolunteerMetrics]);
 
   useEffect(() => { loadStats(); }, [loadStats]);
 
@@ -106,33 +116,34 @@ export default function AdminReports() {
 
       // Summary sheet
       const summaryData = [
-        ['Time Bank of India — Report', `Generated: ${new Date().toLocaleDateString('en-IN')}`],
-        ['Pincode', pincode || 'All'],
+        ['Time Bank of India — Pure Seva Community Report', `Generated: ${new Date().toLocaleDateString('en-IN')}`],
+        ['Jurisdiction', selectedPincode === 'all' ? 'All India (Cross-Pincode)' : `Pincode ${selectedPincode}`],
+        ['Model', 'Pure Seva (Free voluntary community service, time tracked for gratitude & reporting)'],
         [],
-        ['Today Created', stats?.todayCreated],
-        ['Today Pending', stats?.todayPending],
-        ['Today Completed', stats?.todayCompleted],
-        ['Total Completed (All Time)', stats?.totalCompleted],
-        ['Total Cancelled', stats?.totalCancelled],
-        ['Total Seniors', stats?.totalSeniors],
-        ['Total Volunteers', stats?.totalVolunteers],
+        ['Today Created Requests', stats?.todayCreated],
+        ['Today Pending Requests', stats?.todayPending],
+        ['Today Completed Requests', stats?.todayCompleted],
+        ['Total Completed Sevas (All Time)', stats?.totalCompleted],
+        ['Total Cancelled Requests', stats?.totalCancelled],
+        ['Total Registered Seniors', stats?.totalSeniors],
+        ['Total Active Volunteers', stats?.totalVolunteers],
       ];
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(summaryData), 'Summary');
 
       // Volunteer report sheet
-      const volHeaders = ['Name', 'Area', 'Accept Count', 'Complete Count', 'Total Hours', 'Accept %', 'Complete %', 'Rating'];
+      const volHeaders = ['Volunteer Name', 'Area / Pincode', 'Tasks Accepted', 'Tasks Completed', 'Total Seva Given', 'Accept %', 'Complete %', 'Average Rating', 'Review Count'];
       const volRows = volunteerReport.map((v) => [
-        v.name, v.area, v.acceptCount, v.completeCount,
-        formatMinutes(v.totalHours), `${v.acceptPct}%`, `${v.completePct}%`, (v.rating || 0).toFixed(1)
+        v.name, `${v.area || ''} (${v.pincode || ''})`, v.acceptCount, v.completeCount,
+        formatMinutes(v.totalHours), `${v.acceptPct}%`, `${v.completePct}%`, v.avgRating || 'No reviews yet', v.reviewCount
       ]);
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([volHeaders, ...volRows]), 'Volunteers');
 
       // Vulnerable seniors sheet
-      const vulHeaders = ['Name', 'Phone', 'Area', 'Last Login'];
-      const vulRows = vulnerableSeniors.map((s) => [s.name, s.phone || '-', s.area || '-', 'No activity in 7 days']);
+      const vulHeaders = ['Senior Name', 'Phone', 'Area / Pincode', 'Status'];
+      const vulRows = vulnerableSeniors.map((s) => [s.name, s.phone || '-', `${s.area || ''} (${s.pincode || ''})`, 'No activity in last 14 days']);
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([vulHeaders, ...vulRows]), 'Vulnerable Seniors');
 
-      XLSX.writeFile(wb, `TBI-Report-${pincode || 'All'}-${new Date().toISOString().slice(0, 10)}.xlsx`);
+      XLSX.writeFile(wb, `TBI-Seva-Report-${selectedPincode}-${new Date().toISOString().slice(0, 10)}.xlsx`);
     } catch (e) {
       console.error('Excel export error:', e);
       alert('Export failed. Please try again.');
@@ -151,47 +162,48 @@ export default function AdminReports() {
 
       doc.setFontSize(18);
       doc.setTextColor(26, 35, 126);
-      doc.text('Time Bank of India — Report', 20, y); y += 10;
+      doc.text('Time Bank of India — Pure Seva Report', 20, y); y += 9;
 
-      doc.setFontSize(11);
+      doc.setFontSize(10);
       doc.setTextColor(100, 100, 100);
-      doc.text(`Pincode: ${pincode || 'All'} | Generated: ${new Date().toLocaleDateString('en-IN')}`, 20, y); y += 14;
+      doc.text(`Scope: ${selectedPincode === 'all' ? 'All India (Cross-Pincode)' : `Pincode ${selectedPincode}`} | Generated: ${new Date().toLocaleDateString('en-IN')}`, 20, y); y += 12;
 
-      doc.setFontSize(14);
+      doc.setFontSize(13);
       doc.setTextColor(0, 0, 0);
-      doc.text('Today Summary', 20, y); y += 8;
-      doc.setFontSize(11);
+      doc.text('Summary Overview', 20, y); y += 7;
+      doc.setFontSize(10);
       [
         [`Today Created: ${stats?.todayCreated || 0}`],
         [`Today Pending: ${stats?.todayPending || 0}`],
         [`Today Completed: ${stats?.todayCompleted || 0}`],
-        [`Total Completed: ${stats?.totalCompleted || 0}`],
+        [`Total Completed Sevas: ${stats?.totalCompleted || 0}`],
         [`Total Seniors: ${stats?.totalSeniors || 0}`],
         [`Total Volunteers: ${stats?.totalVolunteers || 0}`],
-      ].forEach(([text]) => { doc.text(`  • ${text}`, 20, y); y += 7; });
+      ].forEach(([text]) => { doc.text(`  • ${text}`, 20, y); y += 6; });
 
       y += 6;
-      doc.setFontSize(14);
-      doc.text('Volunteer Report', 20, y); y += 8;
-      doc.setFontSize(10);
+      doc.setFontSize(13);
+      doc.text('Volunteer Performance & Seva Hours', 20, y); y += 7;
+      doc.setFontSize(9);
       volunteerReport.slice(0, 15).forEach((v) => {
         if (y > 270) { doc.addPage(); y = 20; }
-        doc.text(`  ${v.name} — ${formatMinutes(v.totalHours)} seva, Rating: ${(v.rating || 0).toFixed(1)}, Complete: ${v.completePct}%`, 20, y);
-        y += 6;
+        const ratingStr = v.avgRating ? `⭐ ${v.avgRating} (${v.reviewCount})` : 'No reviews yet';
+        doc.text(`  ${v.name} — ${formatMinutes(v.totalHours)} seva, Complete: ${v.completePct}%, Rating: ${ratingStr}`, 20, y);
+        y += 5.5;
       });
 
       if (vulnerableSeniors.length > 0) {
         y += 6;
-        doc.setFontSize(14);
-        doc.text('Vulnerable Seniors (0 activity in 7 days)', 20, y); y += 8;
-        doc.setFontSize(10);
+        doc.setFontSize(13);
+        doc.text('Vulnerable Seniors (No requests in last 14 days)', 20, y); y += 7;
+        doc.setFontSize(9);
         vulnerableSeniors.forEach((s) => {
           if (y > 270) { doc.addPage(); y = 20; }
-          doc.text(`  • ${s.name} — ${s.area || '-'}`, 20, y); y += 6;
+          doc.text(`  • ${s.name} — ${s.area || '-'} · ${s.phone || 'No phone'}`, 20, y); y += 5.5;
         });
       }
 
-      doc.save(`TBI-Report-${pincode || 'All'}-${new Date().toISOString().slice(0, 10)}.pdf`);
+      doc.save(`TBI-Seva-Report-${selectedPincode}-${new Date().toISOString().slice(0, 10)}.pdf`);
     } catch (e) {
       console.error('PDF export error:', e);
       alert('PDF export failed. Please try again.');
@@ -206,28 +218,32 @@ export default function AdminReports() {
         <div className="page-header"><h2 className="page-title">Reports</h2></div>
         <div style={{ textAlign: 'center', padding: 'var(--space-10)', color: 'var(--color-text-muted)' }}>
           <div style={{ fontSize: '2rem', marginBottom: 12 }}>⏳</div>
-          <p>Loading report data…</p>
+          <p>Generating reports…</p>
         </div>
       </div>
     );
   }
 
-  const categoryLabel = { medicine: '💊 Medicine', groceries: '🛒 Groceries', bank: '🏦 Bank', walk: '🚶 Walk', emotional: '🤗 Emotional', other: '🤝 Other' };
+  const currentGeo = getPincodeLocation(currentUser?.pincode, currentUser?.area);
 
   return (
     <div className="page-content">
       <div className="page-header">
-        <div className="page-header-inner">
+        <div className="page-header-inner flex justify-between items-center">
           <div>
-            <h2 className="page-title">📊 Reports</h2>
-            <p className="page-subtitle">Pincode {pincode} · {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+            <h2 className="page-title">📊 Seva & Analytics Reports</h2>
+            <p className="page-subtitle">
+              {selectedPincode === 'all'
+                ? 'All India · Cross-Pincode Community Reporting'
+                : `Pincode ${selectedPincode} (${currentGeo.full})`}
+            </p>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <button
               className="btn btn-ghost btn-sm"
               onClick={exportExcel}
               disabled={!!exporting}
-              style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700 }}
             >
               <Download size={14} /> {exporting === 'excel' ? 'Exporting…' : 'Excel'}
             </button>
@@ -235,7 +251,7 @@ export default function AdminReports() {
               className="btn btn-ghost btn-sm"
               onClick={exportPDF}
               disabled={!!exporting}
-              style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700 }}
             >
               <FileText size={14} /> {exporting === 'pdf' ? 'Exporting…' : 'PDF'}
             </button>
@@ -243,15 +259,36 @@ export default function AdminReports() {
         </div>
       </div>
 
+      {/* Super Admin Cross-Pincode Selector */}
+      {isSuperAdmin && (
+        <div style={{ padding: '0 var(--space-5) var(--space-3)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#F8FAFC', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--color-border)' }}>
+            <Filter size={16} color="var(--color-primary)" />
+            <span style={{ fontSize: 'var(--font-size-xs)', fontWeight: 700 }}>Jurisdiction:</span>
+            <select
+              className="input"
+              style={{ flex: 1, height: 36, padding: '4px 8px' }}
+              value={selectedPincode}
+              onChange={(e) => setSelectedPincode(e.target.value)}
+            >
+              <option value="all">🇮🇳 All India (All Pincodes Combined)</option>
+              <option value="400001">📍 400001 — Colaba, Mumbai</option>
+              <option value="110001">📍 110001 — Connaught Place, New Delhi</option>
+              <option value="560001">📍 560001 — MG Road, Bengaluru</option>
+            </select>
+          </div>
+        </div>
+      )}
+
       <div style={{ padding: '0 var(--space-5) var(--space-5)' }}>
         {/* Today Summary */}
-        <h3 style={{ marginBottom: 'var(--space-3)' }}>📅 Today</h3>
+        <h3 style={{ marginBottom: 'var(--space-3)' }}>📅 Today's Activity</h3>
         <div className="stat-grid" style={{ marginBottom: 'var(--space-5)' }}>
           {[
-            { value: stats?.todayCreated || 0, label: 'Created', color: 'var(--color-primary)' },
-            { value: stats?.todayPending || 0, label: 'Pending', color: 'var(--color-accent)' },
-            { value: stats?.todayCompleted || 0, label: 'Completed', color: 'var(--color-success)' },
-            { value: stats?.totalCancelled || 0, label: 'Cancelled', color: 'var(--color-danger)' },
+            { value: stats?.todayCreated || 0, label: 'Created Today', color: 'var(--color-primary)' },
+            { value: stats?.todayPending || 0, label: 'Pending Help', color: '#D97706' },
+            { value: stats?.todayCompleted || 0, label: 'Completed Sevas', color: '#16A34A' },
+            { value: stats?.totalCancelled || 0, label: 'Cancelled', color: '#DC2626' },
           ].map(({ value, label, color }) => (
             <div key={label} className="stat-card">
               <div className="stat-value" style={{ color }}>{value}</div>
@@ -269,8 +306,8 @@ export default function AdminReports() {
             {Object.entries(stats.categories).map(([type, count]) => (
               <MiniBar
                 key={type}
-                label={categoryLabel[type] || type}
-                value={count}
+                label={`${SERVICE_ICONS[type] || '🤝'} ${SERVICE_LABELS[type] || type}`}
+                value={`${count} task${count === 1 ? '' : 's'}`}
                 max={stats.categoryMax}
                 color="var(--color-primary)"
               />
@@ -280,53 +317,60 @@ export default function AdminReports() {
 
         {/* Vulnerable Seniors Alert */}
         {vulnerableSeniors.length > 0 && (
-          <div className="card" style={{ marginBottom: 'var(--space-4)', border: '2px solid var(--color-danger)', background: 'var(--color-danger-bg)' }}>
-            <h4 style={{ marginBottom: 'var(--space-3)', display: 'flex', alignItems: 'center', gap: 8, color: 'var(--color-danger)' }}>
-              <AlertTriangle size={18} /> ⚠️ Vulnerable Seniors ({vulnerableSeniors.length})
+          <div className="card" style={{ marginBottom: 'var(--space-4)', border: '2px solid #F59E0B', background: '#FFFBEB' }}>
+            <h4 style={{ marginBottom: 'var(--space-2)', display: 'flex', alignItems: 'center', gap: 8, color: '#B45309' }}>
+              <AlertTriangle size={18} /> ⚠️ Vulnerable Seniors Inactivity Alert ({vulnerableSeniors.length})
             </h4>
-            <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-3)' }}>
-              These seniors have had 0 activity in the last 7 days. Please check in.
+            <p style={{ fontSize: 'var(--font-size-xs)', color: '#92400E', marginBottom: 'var(--space-3)' }}>
+              These seniors have had 0 community requests or contact in the last 14+ days.
             </p>
             {vulnerableSeniors.map((s) => (
-              <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', padding: 'var(--space-2) 0', borderBottom: '1px solid var(--color-border)' }}>
+              <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 'var(--space-2) 0', borderBottom: '1px solid #FDE68A' }}>
                 <div>
-                  <div style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)' }}>{s.name}</div>
-                  <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>{s.area} · {s.phone || 'No phone'}</div>
+                  <div style={{ fontWeight: 700, fontSize: 'var(--font-size-sm)' }}>{s.name}</div>
+                  <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>{s.area || 'Local Area'} · {s.phone || 'No phone'}</div>
                 </div>
+                <span style={{ fontSize: '0.75rem', color: '#B45309', fontWeight: 600 }}>Needs check-in</span>
               </div>
             ))}
           </div>
         )}
 
-        {/* Volunteer Report */}
+        {/* Volunteer Performance Table */}
         <div className="card" style={{ marginBottom: 'var(--space-4)' }}>
           <h4 style={{ marginBottom: 'var(--space-4)', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <TrendingUp size={18} color="var(--color-success)" /> Volunteer Performance
+            <TrendingUp size={18} color="#16A34A" /> Volunteer Seva Performance
           </h4>
           {volunteerReport.length === 0 ? (
-            <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>No volunteers in this pincode yet.</p>
+            <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>No volunteer records in this jurisdiction.</p>
           ) : (
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--font-size-xs)' }}>
                 <thead>
                   <tr style={{ borderBottom: '2px solid var(--color-border)' }}>
-                    {['Volunteer', 'Hours', 'Tasks', 'Accept%', 'Complete%', 'Rating'].map((h) => (
-                      <th key={h} style={{ padding: '8px 6px', textAlign: 'left', color: 'var(--color-text-muted)', fontWeight: 600 }}>{h}</th>
+                    {['Volunteer', 'Seva Given', 'Completed', 'Accept %', 'Complete %', 'Rating'].map((h) => (
+                      <th key={h} style={{ padding: '8px 6px', textAlign: 'left', color: 'var(--color-text-muted)', fontWeight: 700 }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {volunteerReport.map((v) => (
                     <tr key={v.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                      <td style={{ padding: '8px 6px', fontWeight: 600 }}>{v.name}</td>
-                      <td style={{ padding: '8px 6px', color: 'var(--color-primary)', fontWeight: 700 }}>{formatMinutes(v.totalHours)}</td>
-                      <td style={{ padding: '8px 6px' }}>{v.completeCount}</td>
+                      <td style={{ padding: '8px 6px', fontWeight: 700 }}>{v.name}</td>
+                      <td style={{ padding: '8px 6px', color: '#16A34A', fontWeight: 800 }}>{formatMinutes(v.totalHours)}</td>
+                      <td style={{ padding: '8px 6px', fontWeight: 600 }}>{v.completeCount}</td>
                       <td style={{ padding: '8px 6px' }}>{v.acceptPct}%</td>
                       <td style={{ padding: '8px 6px' }}>{v.completePct}%</td>
                       <td style={{ padding: '8px 6px' }}>
-                        <span style={{ fontWeight: 700, color: (v.rating || 5) >= 3.5 ? 'var(--color-success)' : 'var(--color-danger)' }}>
-                          ⭐ {(v.rating || 0).toFixed(1)}
-                        </span>
+                        {v.avgRating ? (
+                          <span style={{ fontWeight: 700, color: '#D97706' }}>
+                            ⭐ {v.avgRating} ({v.reviewCount})
+                          </span>
+                        ) : (
+                          <span style={{ color: 'var(--color-text-muted)', fontStyle: 'italic' }}>
+                            No reviews yet
+                          </span>
+                        )}
                       </td>
                     </tr>
                   ))}

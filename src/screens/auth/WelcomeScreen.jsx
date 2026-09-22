@@ -71,11 +71,11 @@ export default function WelcomeScreen() {
           style={{
             color: 'rgba(255,255,255,0.9)',
             fontSize: 'var(--font-size-base)',
-            maxWidth: 320,
+            maxWidth: 340,
             lineHeight: 1.6,
           }}
         >
-          {t('tagline', 'A community where time is currency. Help others, earn time, and let the community support you.')}
+          {t('tagline', 'A community of mutual care and voluntary Seva. Volunteer time to support senior citizens, tracked purely for gratitude and recognition.')}
         </p>
 
         <div
